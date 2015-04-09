@@ -12,7 +12,7 @@ action :configure do
     mode 0644
     variables({
       :description => (
-        new_resource.settings.has_key?(:description) ? new_resource.settings[:description] : new_resource.description
+        new_resource.settings.has_key?(:description) ? new_resource.settings[:description] : new_resource.description || "#{new_resource.name} firewall zone"
       ),
       :interfaces => (
         new_resource.settings.has_key?(:interfaces) ? new_resource.settings[:interfaces] : new_resource.interfaces || []
@@ -27,7 +27,7 @@ action :configure do
         new_resource.settings.has_key?(:services) ? new_resource.settings[:services] : new_resource.services || []
       ),
       :short => (
-        new_resource.settings.has_key?(:short) ? new_resource.settings[:short] : new_resource.short
+        new_resource.settings.has_key?(:short) ? new_resource.settings[:short] : new_resource.short || new_resource.name
       ),
       :sources => (
         new_resource.settings.has_key?(:sources) ? new_resource.settings[:sources] : new_resource.sources || []
