@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<zone<% if @target %> target=<%= @target.encode(:xml=>:attr) %><% end %>>
+  <short><%= @short.encode(:xml=>:text) %></short>
+  <description><%= @description.encode(:xml=>:text) %></description>
+<% @interfaces.each do |name| -%>
+  <interface name="<%= name %>"/>
+<% end -%>
+<% @ports.each do |port| -%>
+  <port protocol="<%= port[:protocol] %>" port="<%= port[:port] %>"/>
+<% end -%>
+<% @rules.each do |rule| -%>
+  <rule<% if rule[:family] %> family="<%= rule[:family] %>"<% end %>>
+<% if rule[:source] -%>
+    <source<% if rule[:source_invert] %>invert="True"<% end %> address="<%= rule[:source] %>"/>
+<% end -%>
+<% if rule[:destination] -%>
+    <destination<% if rule[:destination_invert] %>invert="True"<% end %> address="<%= rule[:destination] %>"/>
+<% end -%>
+<% if rule[:service] -%>
+    <service name="<%= rule[:service] %>"/>
+<% end -%>
+<% if rule[:port]
+     (port,proto) = rule[:port].split('/') -%>
+    <port protocol="<%= proto %>" port="<%= port %>"/>
+<% end -%>
+<% if rule[:action] -%>
+    <<%=rule[:action]%>/>
+<% end -%>
+  </rule>
+<% end -%>
+<% @services.each do |name| -%>
+  <service name="<%= name %>"/>
+<% end -%>
+<% @sources.each do |addr| -%>
+  <source address="<%= addr %>"/>
+<% end -%>
+</zone>

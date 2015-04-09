@@ -12,9 +12,9 @@ firewalldconfig LWRP
 
 This `firewalldconfig` cookbook provides resources for managing your firewalld configurationg using chef node attributes. It can read the current permanent firewalld configuration and store it as node attributes or convert node attributes to firewalld configuration. The advantage of this approach is that it allows the node to be inspected to get an authorative report of its firewall configuration.
 
-## config
+## default
 
-The `filewalld_config` resource can push firewalld configuration from node attributes to firewalld or pull firewalld node attributes from firewalld configuration.
+The filewalldconfig `default` resource can push firewalld configuration from node attributes to firewalld or pull firewalld node attributes from firewalld configuration.
 
 ### Actions
 
