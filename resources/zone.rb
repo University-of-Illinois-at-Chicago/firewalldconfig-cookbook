@@ -41,20 +41,20 @@ interfaces_validator = lambda { |i|
 }
 
 
-ports_validator_text = "must be an array of hashes containing protocol and port number"
+ports_validator_text = "must be an array of strings with the format portid[-portid]/protocol"
 ports_validator = lambda { |i|
   if i.is_a?(Hash)
     if i.has_key?(:ports)
-      v = i[:ports]
+      ports = i[:ports]
     else
       return true
     end
   else
-    v = i
+    ports = i
   end
 
-  for port in v
-    unless port.is_a?(Hash) and port[:port].is_a?(Integer) and [:tcp,:udp].include? port[:protocol]
+  for port in ports
+    unless port.is_a?(String) and /^\d+(-\d+)?\/(tcp|udp)$/.match(port)
       return false
     end
   end

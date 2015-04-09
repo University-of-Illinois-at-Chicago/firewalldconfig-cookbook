@@ -5,8 +5,9 @@
 <% @interfaces.each do |name| -%>
   <interface name="<%= name %>"/>
 <% end -%>
-<% @ports.each do |port| -%>
-  <port protocol="<%= port[:protocol] %>" port="<%= port[:port] %>"/>
+<% @ports.each do |port|
+  (port,proto) = port.split('/') -%>
+  <port protocol="<%= proto %>" port="<%= port %>"/>
 <% end -%>
 <% @rules.each do |rule| -%>
   <rule<% if rule[:family] %> family="<%= rule[:family] %>"<% end %>>
