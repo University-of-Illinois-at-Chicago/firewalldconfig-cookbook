@@ -15,7 +15,7 @@ attribute :file_path, :kind_of => String, :name_attribute => true
 
 # Optional attributes
 attribute :cleanup_on_exit, :kind_of => [TrueClass, FalseClass], :default => true
-attribute :default_zone, :kind_of => String, :default => 'public'
-attribute :ipv6_rpfilter, :kind_of => [TrueClass, FalseClass], :default => true
-attribute :lockdown, :kind_of => [TrueClass, FalseClass], :default => false
-attribute :minimal_mark, :kind_of => [Integer], :default => 100
+attribute :default_zone,    :kind_of => String,                  :default => 'public'
+attribute :ipv6_rpfilter,   :kind_of => [TrueClass, FalseClass], :default => true
+attribute :lockdown,        :kind_of => [TrueClass, FalseClass], :default => false
+attribute :minimal_mark,    :kind_of => [Integer],               :default => 100
