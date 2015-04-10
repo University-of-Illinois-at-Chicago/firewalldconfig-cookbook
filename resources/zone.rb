@@ -8,7 +8,7 @@
 actions :create, :create_if_missing, :delete, :merge
 
 # Make push the default action
-default_action :create
+default_action :merge
 
 # Validator stuff. Externalize checks like this to validate options whether
 # the are passed individually or part of :settings hash.
