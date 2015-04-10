@@ -1,3 +1,22 @@
+def firewalldconfig_readconf(path='/etc/firewalld/firewalld.conf')
+  settings = {}
+  ::File.open(path).each do |line|
+    if /^(?<key>[a-zA-Z0-9]+)=(?<value>.*)/ =~ line
+      case key
+      when "DefaultZone"
+        settings[:default_zone] = value
+      when "MinimalMark"
+        settings[:minimal_mark] = value.to_i
+      when "CleanupOnExit"
+        settings[:cleanup_on_exit] = /^(yes|true)/i.match(value) ? true : false
+      when "Lockdown"
+        settings[:lockdown] = /^(yes|true)/i.match(value) ? true : false
+      end
+    end
+  end
+  return settings
+end
+
 def firewalldconfig_builtin_services
   ::Dir.entries('/usr/lib/firewalld/services/').grep(/^[a-zA-Z].*\.xml$/).collect { |s| s[0..-5] }
 end
