@@ -5,18 +5,25 @@
 # Copyright:: 2015, The University of Illinois at Chicago
 
 # List of all actions supported by provider
-actions :configure
+actions :create, :create_if_missing, :delete, :merge
 
 # Make push the default action
-default_action :configure
+default_action :create
 
 # Validator stuff. Externalize checks like this to validate options whether
 # the are passed individually or part of :settings hash.
-target_validator_text = "must be one of 'default', 'ACCEPT', 'DROP', '%%REJECT%%'" 
+target_validator_text = "must be one of :default, :accept, :drop, :reject" 
 target_validator = lambda { |i|
-  v = ( i.is_a?(Hash) ? i[:target]: i )
-  v = ( i.is_a?(Hash) ? i[:target]: i )
-  ['default','ACCEPT','DROP','%%REJECT%%',nil].include? v
+  if i.is_a?(Hash)
+    if i.has_key?(:target)
+      target = i[:target]
+    else
+      return true
+    end
+  else
+    target = i
+  end
+  [:default,:accept,:drop,:reject].include? target
 }
 
 interfaces_validator_text = "must be an array of network interface names"
@@ -283,6 +290,6 @@ attribute :services, :kind_of => Array, :default => nil, :callbacks => {
 attribute :sources, :kind_of => Array, :default => nil, :callbacks => {
   sources_validator_text => sources_validator,
 }
-attribute :target, :kind_of => String, :default => nil, :callbacks => {
+attribute :target, :kind_of => Symbol, :default => nil, :callbacks => {
   target_validator_text => target_validator,
 }
