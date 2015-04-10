@@ -4,10 +4,9 @@
 #
 # Copyright:: 2015, The University of Illinois at Chicago
 
+include_recipe "xml::ruby"
+
 package 'firewalld'
-chef_gem 'nokogiri' do
-  compile_time false
-end
 
 service "firewalld" do
   action [:enable, :start]

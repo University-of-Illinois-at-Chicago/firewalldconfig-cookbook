@@ -6,6 +6,8 @@ description      'Installs/Configures firewalld using attributes and config file
 long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
 version          '0.1.4'
 
+depends          'xml'
+
 supports         'fedora', ">= 15.0"
 supports         'centos', ">= 7.0"
 supports         'rhel', ">= 7.0"
