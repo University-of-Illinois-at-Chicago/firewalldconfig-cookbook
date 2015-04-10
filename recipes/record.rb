@@ -4,6 +4,10 @@
 #
 # Copyright:: 2015, The University of Illinois at Chicago
 
+firewalldconfig_readconf.each do |k,v|
+  node.set[:firewalld][k] = v
+end
+
 node.set[:firewalld][:services] = {}
 firewalldconfig_custom_services.each do |service|
   node.set[:firewalld][:services][service] = firewalldconfig_readservice(service)
