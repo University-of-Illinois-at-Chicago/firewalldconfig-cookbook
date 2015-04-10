@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<zone<% if @target %> target=<%= @target.encode(:xml=>:attr) %><% end %>>
+<zone<% if @target and @target != :default %> target="<%= @target == :reject ? '%%REJECT%%' : @target.to_s.upcase %>"<% end %>>
   <short><%= @short.encode(:xml=>:text) %></short>
   <description><%= @description.encode(:xml=>:text) %></description>
 <% @interfaces.each do |name| -%>
