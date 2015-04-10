@@ -2,7 +2,7 @@
 # Cookbook Name:: firewalldconfig
 # Provider:: zone
 #
-# Copyright:: 2015, Johnathan Kupferer
+# Copyright:: 2015, The University of Illinois at Chicago
 
 action :configure do
 

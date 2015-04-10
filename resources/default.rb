@@ -2,7 +2,7 @@
 # Cookbook Name:: firewalldconfig
 # Provider:: default
 #
-# Copyright:: 2015, Johnathan Kupferer
+# Copyright:: 2015, The University of Illinois at Chicago
 
 # List of all actions supported by provider
 actions :configure

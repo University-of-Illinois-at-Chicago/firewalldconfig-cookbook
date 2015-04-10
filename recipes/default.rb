@@ -2,7 +2,7 @@
 # Cookbook Name:: firewalldconfig
 # Recipe:: default
 #
-# Copyright (c) 2015 The University of Illinois at Chicago, All Rights Reserved.
+# Copyright:: 2015, The University of Illinois at Chicago
 
 package 'firewalldconfig'
 
