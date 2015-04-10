@@ -14,7 +14,6 @@ default_action :configure
 attribute :file_path, :kind_of => String, :name_attribute => true
 
 # Optional attributes
-attribute :settings, :kind_of => Hash, :default => {}
 attribute :cleanup_on_exit, :kind_of => [TrueClass, FalseClass], :default => true
 attribute :default_zone, :kind_of => String, :default => 'public'
 attribute :ipv6_rpfilter, :kind_of => [TrueClass, FalseClass], :default => true

@@ -1,3 +1,53 @@
+def firewalldconfig_builtin_services
+  ::Dir.entries('/usr/lib/firewalld/services/').grep(/^[a-zA-Z].*\.xml$/).collect { |s| s[0..-5] }
+end
+
+def firewalldconfig_custom_services
+  ::Dir.entries('/etc/firewalld/services/').grep(/^[a-zA-Z].*\.xml$/).collect { |s| s[0..-5] }
+end
+
+def firewalldconfig_all_services
+  ( firewalld_bulitin_services + firewalldconfig_custom_services ).uniq
+end
+
+def firewalldconfig_readservice(name)
+  require 'nokogiri'
+
+  if ::File.exists? "/etc/firewalld/services/#{name}.xml"
+    service_xml = "/etc/firewalld/services/#{name}.xml"
+  elsif ::File.exists? "/usr/lib/firewalld/services/#{name}.xml"
+    service_xml = "/usr/lib/firewalld/services/#{name}.xml"
+  else
+    return nil
+  end
+
+  doc = Nokogiri::XML( File.open(service_xml) )
+
+  service = {
+    :description => doc.at_xpath('/service/description').content,
+    :short => doc.at_xpath('/service/short').content,
+    :ports => [],
+  }
+
+  doc.xpath('/service/port').each do |port|
+    service[:ports].push( port["port"]+'/'+port["protocol"] )
+  end
+
+  return service
+end
+
+def firewalldconfig_builtin_zones
+  ::Dir.entries('/usr/lib/firewalld/zones/').grep(/^[a-zA-Z].*\.xml$/).collect { |s| s[0..-5] }
+end
+
+def firewalldconfig_custom_zones
+  ::Dir.entries('/etc/firewalld/zones/').grep(/^[a-zA-Z].*\.xml$/).collect { |s| s[0..-5] }
+end
+
+def firewalldconfig_all_zones
+  ( firewalld_bulitin_zones + firewalldconfig_custom_zones ).uniq
+end
+
 def firewalldconfig_readzone(name)
   require 'nokogiri'
 

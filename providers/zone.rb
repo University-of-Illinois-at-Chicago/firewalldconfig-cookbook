@@ -11,8 +11,6 @@ action :create do
 
   if new_resource.description
     description = new_resource.description
-  elsif new_resource.settings.has_key? :description
-    description = new_resource.settings[:description]
   elsif current_zone and current_zone[:description]
     description = current_zone[:description]
   else
@@ -21,8 +19,6 @@ action :create do
 
   if new_resource.short
     short = new_resource.short
-  elsif new_resource.settings.has_key? :short
-    short = new_resource.settings[:short]
   elsif current_zone and current_zone[:short]
     short = current_zone[:short]
   else
@@ -35,13 +31,13 @@ action :create do
     mode 0644
     variables({
       :description => description,
-      :interfaces  => new_resource.interfaces || new_resource.settings[:interfaces] || [],
-      :ports       => new_resource.ports      || new_resource.settings[:ports]      || [],
-      :rules       => new_resource.rules      || new_resource.settings[:rules]      || [],
-      :services    => new_resource.services   || new_resource.settings[:services]   || [],
+      :interfaces  => new_resource.interfaces.uniq.sort,
+      :ports       => new_resource.ports.uniq.sort,
+      :rules       => new_resource.rules.uniq.sort,
+      :services    => new_resource.services.uniq.sort,
       :short       => short,
-      :sources     => new_resource.sources    || new_resource.settings[:sources]    || [],
-      :target      => new_resource.target     || new_resource.settings[:target],
+      :sources     => new_resource.sources.uniq.sort,
+      :target      => new_resource.target,
     })
   end
 
@@ -73,40 +69,21 @@ action :merge do
 
   if new_resource.description
     description = new_resource.description
-  elsif new_resource.settings.has_key? :description
-    description = new_resource.settings[:description]
   elsif current_zone and current_zone[:description]
     description = current_zone[:description]
   else
     description = "#{new_resource.name} firewall zone."
   end
 
-  interfaces = new_resource.interfaces || new_resource.settings[:interfaces] || []
-  interfaces = (interfaces + current_zone[:interfaces]).uniq
-
-  ports = new_resource.ports || new_resource.settings[:ports] || []
-  ports = (ports + current_zone[:ports]).uniq
-
-  rules = new_resource.rules || new_resource.settings[:rules] || []
-  rules = (rules + current_zone[:rules]).uniq
-
-  services = new_resource.services || new_resource.settings[:services] || []
-  services = (services + current_zone[:services]).uniq
-
   if new_resource.short
     short = new_resource.short
-  elsif new_resource.settings.has_key? :short
-    short = new_resource.settings[:short]
   elsif current_zone and current_zone[:short]
     short = current_zone[:short]
   else
     short = new_resource.name
   end
 
-  sources = new_resource.sources || new_resource.settings[:sources] || []
-  sources = (sources + current_zone[:sources]).uniq
-
-  target = new_resource.target || new_resource.settings[:target] || current_zone[:target]
+  target = new_resource.target || current_zone[:target]
 
   t = template "/etc/firewalld/zones/#{new_resource.name}.xml" do
     cookbook 'firewalldconfig'
@@ -114,12 +91,12 @@ action :merge do
     mode 0644
     variables({
       :description => description,
-      :interfaces  => interfaces,
-      :ports       => ports,
-      :rules       => rules,
-      :services    => services,
+      :interfaces  => (new_resource.interfaces + current_zone[:interfaces] ).uniq.sort,
+      :ports       => (new_resource.ports      + current_zone[:ports]      ).uniq.sort,
+      :rules       => (new_resource.rules      + current_zone[:rules]      ).uniq.sort,
+      :services    => (new_resource.services   + current_zone[:services]   ).uniq.sort,
       :short       => short,
-      :sources     => sources,
+      :sources     => (new_resource.sources    + current_zone[:sources]    ).uniq.sort,
       :target      => target,
     })
   end
