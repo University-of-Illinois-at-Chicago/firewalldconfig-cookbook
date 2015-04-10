@@ -18,4 +18,4 @@ attribute :cleanup_on_exit, :kind_of => [TrueClass, FalseClass], :default => tru
 attribute :default_zone,    :kind_of => String,                  :default => 'public'
 attribute :ipv6_rpfilter,   :kind_of => [TrueClass, FalseClass], :default => true
 attribute :lockdown,        :kind_of => [TrueClass, FalseClass], :default => false
-attribute :minimal_mark,    :kind_of => [Integer],               :default => 100
+attribute :minimal_mark,    :kind_of => Integer,                 :default => 100
