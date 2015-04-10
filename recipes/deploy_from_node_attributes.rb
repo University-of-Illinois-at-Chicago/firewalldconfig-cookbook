@@ -6,10 +6,6 @@
 
 include_recipe "firewalldconfig"
 
-# FIXME - 
-#firewalldconfig  do
-#  settings node[:firewalld]
-#end
 c = Chef::Resource::Firewalldconfig.new('/etc/firewalld/firewalld.conf',run_context)
 Chef::Resource::Firewalldconfig.state_attrs.each do |k|
   if node[:firewalld].has_key? k

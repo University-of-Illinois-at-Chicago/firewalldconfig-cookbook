@@ -112,7 +112,7 @@ def firewalldconfig_readzone(name)
     end
 
     # FIXME protocol icmp_block masquerade forward-port log audit
-    
+
     if rule.at_xpath('/accept')
       r[:action] = :accept
     elsif rule.at_xpath('/drop')
@@ -123,7 +123,7 @@ def firewalldconfig_readzone(name)
         r[:reject_with] = rule.at_xpath('/reject')["type"].to_sym
       end
     end
-   
+
     zone[:rules].push( r )
   end
 

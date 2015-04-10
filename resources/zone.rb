@@ -45,7 +45,7 @@ attribute :rules, :kind_of => Array, :default => [], :callbacks => {
       unless [:ipv4,:ipv6,nil].include? rule[:family]
         return false
       end
-  
+
       #  source: ipv4 or ipv6 address to match family
       if rule[:source]
         case rule[:family]
@@ -61,13 +61,13 @@ attribute :rules, :kind_of => Array, :default => [], :callbacks => {
           return false
         end
       end
-  
+
       if rule.has_key?(:source_invert)
         unless [TrueClass,FalseClass].include? rule[:source_invert].class
           return false
         end
       end
-  
+
       #  destination: ipv4 or ipv6 address to match family
       if rule[:destination]
         case rule[:family]
@@ -83,13 +83,13 @@ attribute :rules, :kind_of => Array, :default => [], :callbacks => {
           return false
         end
       end
-  
+
       if rule.has_key?(:destination_invert)
         unless [TrueClass,FalseClass].include? rule[:destination_invert].class
           return false
         end
       end
-  
+
       if rule.has_key?(:service)
         # service - string
         # FIXME
@@ -121,7 +121,7 @@ attribute :rules, :kind_of => Array, :default => [], :callbacks => {
         end
         # FIXME
       end
-  
+
       if rule.has_key?(:log)
         #  log - hash with keys
         #    prefix - string
@@ -129,7 +129,7 @@ attribute :rules, :kind_of => Array, :default => [], :callbacks => {
         #    limit - \d+/[smhd]
         # FIXME
       end
-  
+
       if rule.has_key?(:audit)
         #  audit - boolean
         # FIXME
@@ -137,18 +137,18 @@ attribute :rules, :kind_of => Array, :default => [], :callbacks => {
           return false
         end
       end
-    
+
       if rule.has_key?(:action)
         unless [:accept,:reject,:drop].include? rule[:action]
           return false
         end
       end
-    
+
       if rule.has_key?(:reject_with)
         unless rule[:action] == :reject
           return false
         end
-    
+
         case rule[:family]
         when :ipv4
           unless [:icmp_net_unreachable,:icmp_host_unreachable,:icmp_port_unreachable,:icmp_proto_unreachable,:icmp_net_prohibited,:icmp_host_prohibited,:icmp_admin_prohibited,:tcp_reset].include? rule[:reject_with]
@@ -162,9 +162,9 @@ attribute :rules, :kind_of => Array, :default => [], :callbacks => {
           return false
         end
       end
-  
+
     end
-  
+
     return true
   }
 }
