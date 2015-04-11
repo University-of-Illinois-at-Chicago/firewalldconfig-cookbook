@@ -54,7 +54,6 @@ action :create_if_missing do
     new_resource.updated_by_last_action( false )
   else
     action_create
-    new_resource.updated_by_last_action( true )
   end
 end
 
