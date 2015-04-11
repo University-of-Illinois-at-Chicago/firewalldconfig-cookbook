@@ -210,7 +210,7 @@ EOF
 
   zone[:rules].each do |rule|
     node = doc.create_element "rule"
-    node[:family] = rule[:family] if rule[:family]
+    node[:family] = rule[:family] if rule.has_key? :family
     if rule[:source]
       source = doc.create_element "source", :address => rule[:source]
       source[:invert] = "True" if rule[:source_invert]
