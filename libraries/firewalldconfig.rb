@@ -221,7 +221,7 @@ EOF
       destination[:invert] = "True" if rule[:destination_invert]
       node.add_child destination
     end
-    
+
     if rule[:service]
       node.add_child doc.create_element "service", :name => rule[:service]
     end
