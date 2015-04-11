@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<service>
-  <short><%= @short.encode(:xml=>:text) %></short>
-  <description><%= @description.encode(:xml=>:text) %></description>
-<% @ports.each do |port|
-  (port,proto) = port.split('/') -%>
-  <port protocol="<%= proto %>" port="<%= port %>"/>
-<% end -%>
-</service>

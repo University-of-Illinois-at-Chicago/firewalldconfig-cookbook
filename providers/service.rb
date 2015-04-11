@@ -7,44 +7,45 @@
 action :create do
 
   current_service = firewalldconfig_readservice( new_resource.name )
+  service = {
+    :description => new_resource.description,
+    :ports       => ( new_resource.ports || [] ).uniq.sort,
+    :short       => new_resource.short,
+  }
 
-  if new_resource.description
-    description = new_resource.description
-  elsif current_service and current_service[:description]
-    description = current_service[:description]
+  if service[:description].nil?
+    if current_service and current_service.has_key? :description
+      service[:description] = current_service[:description]
+    else
+      service[:description] = "#{new_resource.name} firewall service."
+    end
+  end
+
+  if service[:short].nil?
+    if current_service and current_service.has_key? :short
+      service[:short] = current_service[:short]
+    else
+      service[:short] = new_resource.name
+    end
+  end
+
+  if current_service and service == current_service
+    Chef::Log.debug "Firewalld service #{ @new_resource } already created as specified - nothing to do."
+    new_resource.updated_by_last_action( false )
   else
-    description = "#{new_resource.name} service."
+    converge_by("Create firewalld service, #{new_resource.name}, configuration at /etc/firewalld/services/#{new_resource.name}.xml") do
+      firewalldconfig_writeservice( new_resource.name, service )
+      new_resource.updated_by_last_action( true )
+    end
   end
-
-  if new_resource.short
-    short = new_resource.short
-  elsif current_service and current_service[:short]
-    short = current_service[:short]
-  else
-    short = new_resource.name
-  end
-
-  t = template "/etc/firewalld/services/#{new_resource.name}.xml" do
-    cookbook 'firewalldconfig'
-    source 'service.xml.erb'
-    mode 0644
-    variables({
-      :description => description,
-      :ports => new_resource.ports.uniq.sort,
-      :short => short,
-    })
-    action :create
-  end
-
-  new_resource.updated_by_last_action(t.updated_by_last_action?)
 
 end
 
 action :create_if_missing do
   if ::File.exists? "/etc/firewalld/service/#{new_resource.name}.xml"
-    Chef::Log.debug("firewalld service #{new_resource.zone} already customized, taking no action.")
+    Chef::Log.debug("Firewalld service #{new_resource.name} already customized, taking no action.")
     new_resource.updated_by_last_action( false )
   else
-    new_resource.updated_by_last_action( true )
+    action_create
   end
 end

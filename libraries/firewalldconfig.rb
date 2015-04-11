@@ -1,22 +1,3 @@
-def firewalldconfig_readconf(path='/etc/firewalld/firewalld.conf')
-  settings = {}
-  ::File.open(path).each do |line|
-    if /^(?<key>[a-zA-Z0-9]+)=(?<value>.*)/ =~ line
-      case key
-      when "DefaultZone"
-        settings[:default_zone] = value
-      when "MinimalMark"
-        settings[:minimal_mark] = value.to_i
-      when "CleanupOnExit"
-        settings[:cleanup_on_exit] = /^(yes|true)/i.match(value) ? true : false
-      when "Lockdown"
-        settings[:lockdown] = /^(yes|true)/i.match(value) ? true : false
-      end
-    end
-  end
-  return settings
-end
-
 def firewalldconfig_builtin_services
   ::Dir.entries('/usr/lib/firewalld/services/').grep(/^[a-zA-Z].*\.xml$/).collect { |s| s[0..-5] }
 end
@@ -53,6 +34,29 @@ def firewalldconfig_readservice(name)
   end
 
   return service
+end
+
+def firewalldconfig_writeservice(name,service)
+  doc = Nokogiri::XML::Document.parse(<<EOF)
+<?xml version="1.0" encoding="utf-8"?>
+<service>
+  <short></short>
+  <description></description>
+</service>
+EOF
+  root = doc.at_xpath("/service");
+
+  doc.at_xpath("/service/short").content = service[:short]
+  doc.at_xpath("/service/description").content = service[:description]
+
+  service[:ports].each do |port|
+    (port,proto) = port.split('/')
+    root.add_child doc.create_element "port", :protocol => proto, :port => port
+  end
+
+  fh = ::File.new("/etc/firewalld/services/#{name}.xml","w")
+  doc.write_xml_to fh, :encoding => 'UTF-8'
+  fh.close
 end
 
 def firewalldconfig_builtin_zones
