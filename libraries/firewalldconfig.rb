@@ -21,12 +21,12 @@ def firewalldconfig_builtin_services
   ::Dir.entries('/usr/lib/firewalld/services/').grep(/^[a-zA-Z].*\.xml$/).collect { |s| s[0..-5] }
 end
 
-def firewalldconfig_custom_services
+def firewalldconfig_configured_services
   ::Dir.entries('/etc/firewalld/services/').grep(/^[a-zA-Z].*\.xml$/).collect { |s| s[0..-5] }
 end
 
 def firewalldconfig_all_services
-  ( firewalld_bulitin_services + firewalldconfig_custom_services ).uniq
+  ( firewalld_bulitin_services + firewalldconfig_configured_services ).uniq
 end
 
 def firewalldconfig_readservice(name)
@@ -59,12 +59,12 @@ def firewalldconfig_builtin_zones
   ::Dir.entries('/usr/lib/firewalld/zones/').grep(/^[a-zA-Z].*\.xml$/).collect { |s| s[0..-5] }
 end
 
-def firewalldconfig_custom_zones
+def firewalldconfig_configured_zones
   ::Dir.entries('/etc/firewalld/zones/').grep(/^[a-zA-Z].*\.xml$/).collect { |s| s[0..-5] }
 end
 
 def firewalldconfig_all_zones
-  ( firewalld_bulitin_zones + firewalldconfig_custom_zones ).uniq
+  ( firewalld_bulitin_zones + firewalldconfig_configured_zones ).uniq
 end
 
 def firewalldconfig_readzone(name)
@@ -88,6 +88,15 @@ def firewalldconfig_readzone(name)
     :services => [],
     :sources => [],
   }
+
+  case doc.root[:target]
+  when 'ACCEPT'
+    zone[:target] = :accept
+  when 'DROP'
+    zone[:target] = :drop
+  when '%%REJECT%%'
+    zone[:target] = :reject
+  end
 
   doc.xpath('/zone/interface').each do |interface|
     zone[:interfaces].push( interface["name"] )
@@ -154,5 +163,85 @@ def firewalldconfig_readzone(name)
     zone[:sources].push( source["address"] )
   end
 
+  zone[:interfaces].sort!.uniq!
+  zone[:ports].sort!.uniq!
+  zone[:rules].sort!.uniq!
+  zone[:services].sort!.uniq!
+  zone[:sources].sort!.uniq!
+
   return zone
+end
+
+def firewalldconfig_writezone(name,zone)
+  doc = Nokogiri::XML::Document.parse(<<EOF)
+<?xml version="1.0" encoding="utf-8"?>
+<zone>
+  <short></short>
+  <description></description>
+</zone>
+EOF
+  root = doc.at_xpath("/zone");
+
+  case zone[:target]
+  when :accept
+    root[:target] = 'ACCEPT'
+  when :drop
+    root[:target] = 'DROP'
+  when :reject
+    root[:target] = '%%REJECT%%'
+  end
+
+  doc.at_xpath("/zone/short").content = zone[:short]
+  doc.at_xpath("/zone/description").content = zone[:description]
+
+  zone[:interfaces].each do |name|
+    node = doc.create_element "interface", :name => name
+    root.add_child node
+  end
+
+  zone[:ports].each do |port|
+    (port,proto) = port.split('/')
+    root.add_child doc.create_element "port", :protocol => proto, :port => port
+  end
+
+  zone[:rules].each do |rule|
+    node = doc.create_element "rule"
+    node[:family] = rule[:family] if rule[:family]
+    if rule[:source]
+      source = doc.create_element "source", :address => rule[:source]
+      source[:invert] = "True" if rule[:source_invert]
+      node.add_child source
+    end
+    if rule[:destination]
+      destination = doce.create_element "destination", :address => rule[:destination]
+      destination[:invert] = "True" if rule[:destination_invert]
+      node.add_child destination
+    end
+    
+    if rule[:service]
+      node.add_child doc.create_element "service", :name => rule[:service]
+    end
+
+    if rule[:port]
+      (port,proto) = rule[:port].split('/')
+      node.add_child doc.create_element "port", :protocol => proto, :port => port
+    end
+
+    if rule[:action]
+      node.add_child doc.create_element rule[:action]
+    end
+
+  end
+
+  zone[:services].each do |name|
+    root.add_child doc.create_element "service", :name => name
+  end
+
+  zone[:sources].each do |addr|
+    root.add_child doc.create_element "source", :address => addr
+  end
+
+  fh = ::File.new("/etc/firewalld/zones/#{name}.xml","w")
+  doc.write_xml_to fh, :encoding => 'UTF-8'
+  fh.close
 end

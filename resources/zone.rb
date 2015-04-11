@@ -16,7 +16,7 @@ attribute :name, :kind_of => String, :name_attribute => true
 # Optional attributes
 attribute :description, :kind_of => String, :default => nil
 
-attribute :interfaces, :kind_of => Array, :default => [], :callbacks => {
+attribute :interfaces, :kind_of => Array, :default => nil, :callbacks => {
   "must be an array of network interface names" => lambda { |interfaces|
     for interface in interfaces
       unless interface.is_a?(String)
@@ -27,7 +27,7 @@ attribute :interfaces, :kind_of => Array, :default => [], :callbacks => {
   }
 }
 
-attribute :ports, :kind_of => Array, :default => [], :callbacks => {
+attribute :ports, :kind_of => Array, :default => nil, :callbacks => {
   "must be an array of strings with the format portid[-portid]/protocol" => lambda { |ports|
     for port in ports
       unless port.is_a?(String) and /^\d+(-\d+)?\/(tcp|udp)$/.match(port)
@@ -38,7 +38,7 @@ attribute :ports, :kind_of => Array, :default => [], :callbacks => {
   }
 }
 
-attribute :rules, :kind_of => Array, :default => [], :callbacks => {
+attribute :rules, :kind_of => Array, :default => nil, :callbacks => {
   "must be an array of rich rule definitions" => lambda { |rules|
     for rule in rules
       #  family: ipv4 ipv6
@@ -171,7 +171,7 @@ attribute :rules, :kind_of => Array, :default => [], :callbacks => {
 
 attribute :short, :kind_of => String, :default => nil
 
-attribute :services, :kind_of => Array, :default => [], :callbacks => {
+attribute :services, :kind_of => Array, :default => nil, :callbacks => {
   "must be an array of service names defined for firewalld" => lambda { |services|
     for service in services
       unless service.is_a?(String)
@@ -183,7 +183,7 @@ attribute :services, :kind_of => Array, :default => [], :callbacks => {
   }
 }
 
-attribute :sources, :kind_of => Array, :default => [], :callbacks => {
+attribute :sources, :kind_of => Array, :default => nil, :callbacks => {
   "must be an array of network subnets in CIDR format" => lambda { |sources|
     for source in sources
       unless source.is_a?(String)

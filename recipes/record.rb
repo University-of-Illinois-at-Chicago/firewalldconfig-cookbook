@@ -9,12 +9,12 @@ firewalldconfig_readconf.each do |k,v|
 end
 
 node.set[:firewalld][:services] = {}
-firewalldconfig_custom_services.each do |service|
+firewalldconfig_configured_services.each do |service|
   node.set[:firewalld][:services][service] = firewalldconfig_readservice(service)
 end
 
 node.set[:firewalld][:zones] = {}
-firewalldconfig_custom_zones.each do |zone|
+firewalldconfig_configured_zones.each do |zone|
   node.set[:firewalld][:zones][zone] = firewalldconfig_readzone(zone)
 end
 

@@ -8,99 +8,101 @@
 action :create do
 
   current_zone = firewalldconfig_readzone( new_resource.name )
+  zone = {
+    :interfaces => ( new_resource.interfaces || [] ).uniq.sort,
+    :ports      => ( new_resource.ports      || [] ).uniq.sort,
+    :rules      => ( new_resource.sources    || [] ).uniq.sort,
+    :sources    => ( new_resource.sources    || [] ).uniq.sort,
+    :services   => ( new_resource.services   || [] ).uniq.sort,
+  }
 
-  if new_resource.description
-    description = new_resource.description
-  elsif current_zone and current_zone[:description]
-    description = current_zone[:description]
+  if zone[:description].nil?
+    if current_zone and current_zone.has_key? :description
+      zone[:description] = current_zone[:description]
+    else
+      zone[:description] = "#{new_resource.name} firewall zone."
+    end
+  end
+
+  if zone[:short].nil?
+    if current_zone and current_zone.has_key? :short
+      zone[:short] = current_zone[:short]
+    else
+      zone[:short] = new_resource.name
+    end
+  end
+
+  zone[:target] = new_resource.target unless [:default,nil].include? new_resource.target
+
+  unless current_zone and zone == current_zone
+    converge_by("Create firewalld zone, #{new_resource.name}, configuration at /etc/firewalld/zones/#{new_resource.name}.xml") do
+      firewalldconfig_writezone( new_resource.name, zone )
+      new_resource.updated_by_last_action( true )
+    end
   else
-    description = "#{new_resource.name} firewall zone."
+    Chef::Log.debug "#{ @new_resource } already created as specified - nothing to do."
+    new_resource.updated_by_last_action( false )
   end
-
-  if new_resource.short
-    short = new_resource.short
-  elsif current_zone and current_zone[:short]
-    short = current_zone[:short]
-  else
-    short = new_resource.name
-  end
-
-  t = template "/etc/firewalld/zones/#{new_resource.name}.xml" do
-    cookbook 'firewalldconfig'
-    source 'zone.xml.erb'
-    mode 0644
-    variables({
-      :description => description,
-      :interfaces  => new_resource.interfaces.uniq.sort,
-      :ports       => new_resource.ports.uniq.sort,
-      :rules       => new_resource.rules.uniq.sort,
-      :services    => new_resource.services.uniq.sort,
-      :short       => short,
-      :sources     => new_resource.sources.uniq.sort,
-      :target      => new_resource.target,
-    })
-  end
-
-  new_resource.updated_by_last_action(t.updated_by_last_action?)
 
 end
 
 action :create_if_missing do
   if ::File.exists? "/etc/firewalld/zones/#{new_resource.name}.xml"
-    Chef::Log.debug("firewalld zone #{new_resource.zone} already customized, taking no action.")
+    Chef::Log.debug("firewalld zone, #{new_resource.name}, already configured at /etc/firewalld/zones/#{new_resource.name}.xml")
     new_resource.updated_by_last_action( false )
   else
+    action_create
     new_resource.updated_by_last_action( true )
   end
 end
 
 action :delete do
   if ::File.exists? "/etc/firewalld/zones/#{new_resource.name}.xml"
-    ::File.unlink "/etc/firewalld/zones/#{new_resource.name}.xml"
-    new_resource.updated_by_last_action( true )
+    converge_by("Remave firewalld zone, #{new_resource.name}, configuration at /etc/firewalld/zones/#{new_resource.name}.xml") do
+      ::File.unlink "/etc/firewalld/zones/#{new_resource.name}.xml"
+      new_resource.updated_by_last_action( true )
+    end
   else
+    Chef::Log.debug("firewalld zone, #{new_resource.name}, not configured - nothing to do")
     new_resource.updated_by_last_action( false )
   end
 end
 
 action :merge do
 
-  current_zone = firewalldconfig_readzone( new_resource.name ) || { :interfaces => [], :ports => [], :rules => [], :services => [], :sources => [] }
+  if firewalldconfig_configured_zones.include? new_resource.name
+    current_zone = firewalldconfig_readzone( new_resource.name )
+    zone = current_zone.clone
 
-  if new_resource.description
-    description = new_resource.description
-  elsif current_zone and current_zone[:description]
-    description = current_zone[:description]
+    zone[:description] = new_resource.description unless new_resource.description.nil?
+    zone[:interfaces]  = ( new_resource.interfaces + current_zone[:interfaces] ).uniq.sort unless new_resource.interfaces.nil?
+    zone[:ports]       = ( new_resource.ports      + current_zone[:ports]      ).uniq.sort unless new_resource.ports.nil?
+    zone[:rules]       = ( new_resource.rules      + current_zone[:rules]      ).uniq.sort unless new_resource.rules.nil?
+    zone[:services]    = ( new_resource.services   + current_zone[:services]   ).uniq.sort unless new_resource.services.nil?
+    zone[:short]       = new_resource.short unless new_resource.short.nil?
+    zone[:sources]     = ( new_resource.sources    + current_zone[:sources]    ).uniq.sort unless new_resource.sources.nil?
+
+    # Target :default means remove any special target.
+    if new_resource.target == :default
+      zone.delete(:target)
+    elsif not new_resource.target.nil?
+      zone[:target] = new_resource.target
+    end
+
+    unless current_zone and zone == current_zone
+      converge_by("Merge changes into firewalld zone, #{new_resource.name}, configuration at /etc/firewalld/zones/#{new_resource.name}.xml") do
+        firewalldconfig_writezone( new_resource.name, zone )
+        new_resource.updated_by_last_action( true )
+      end
+    else
+      Chef::Log.debug "#{ @new_resource } already is as specified - nothing to do."
+      new_resource.updated_by_last_action( false )
+    end
+
   else
-    description = "#{new_resource.name} firewall zone."
+
+    action_create
+
   end
-
-  if new_resource.short
-    short = new_resource.short
-  elsif current_zone and current_zone[:short]
-    short = current_zone[:short]
-  else
-    short = new_resource.name
-  end
-
-  target = new_resource.target || current_zone[:target]
-
-  t = template "/etc/firewalld/zones/#{new_resource.name}.xml" do
-    cookbook 'firewalldconfig'
-    source 'zone.xml.erb'
-    mode 0644
-    variables({
-      :description => description,
-      :interfaces  => (new_resource.interfaces + current_zone[:interfaces] ).uniq.sort,
-      :ports       => (new_resource.ports      + current_zone[:ports]      ).uniq.sort,
-      :rules       => (new_resource.rules      + current_zone[:rules]      ).uniq.sort,
-      :services    => (new_resource.services   + current_zone[:services]   ).uniq.sort,
-      :short       => short,
-      :sources     => (new_resource.sources    + current_zone[:sources]    ).uniq.sort,
-      :target      => target,
-    })
-  end
-
-  new_resource.updated_by_last_action(t.updated_by_last_action?)
 
 end
