@@ -15,7 +15,7 @@ attribute :name, :kind_of => String, :name_attribute => true
 
 # Optional attributes
 attribute :description, :kind_of => String, :default => nil
-attribute :ports, :kind_of => Array, :default => [], :callbacks => {
+attribute :ports, :kind_of => Array, :default => nil, :callbacks => {
   "must be an array of strings with the format portid[-portid]/protocol" => lambda { |ports|
     for port in ports
       unless port.is_a?(String) and /^\d+(-\d+)?\/(tcp|udp)$/.match(port)

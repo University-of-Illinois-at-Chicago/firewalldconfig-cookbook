@@ -7,9 +7,26 @@
 action :create do
 
   current_service = firewalldconfig_readservice( new_resource.name )
+
+  if new_resource.ports.nil?
+    ports = []
+    %w{tcp udp}.each do |proto|
+      port = Socket::getservbyname( new_resource.name, proto )
+      ports.push "#{port}/#{proto}" unless port.nil?
+    end
+    if ports.empty?
+      raise "Unable to determine ports for service #{new_resource.name}"
+    end
+    new_resource.ports( ports )
+  end
+
+  if new_resource.description.nil?
+    new_resource.description( new_resource.name )
+  end
+
   service = {
     :description => new_resource.description,
-    :ports       => ( new_resource.ports || [] ).uniq.sort,
+    :ports       => new_resource.ports.uniq.sort,
     :short       => new_resource.short,
   }
 
@@ -30,10 +47,10 @@ action :create do
   end
 
   if current_service and service == current_service
-    Chef::Log.debug "Firewalld service #{ @new_resource } already created as specified - nothing to do."
+    Chef::Log.debug "Firewalld service #{ new_resource.name } already created as specified - nothing to do."
     new_resource.updated_by_last_action( false )
   else
-    converge_by("Create firewalld service, #{new_resource.name}, configuration at /etc/firewalld/services/#{new_resource.name}.xml") do
+    converge_by("Create firewalld service, #{ new_resource.name }, configuration at /etc/firewalld/services/#{new_resource.name}.xml") do
       firewalldconfig_writeservice( new_resource.name, service )
       new_resource.updated_by_last_action( true )
     end
