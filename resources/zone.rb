@@ -113,12 +113,28 @@ attribute :rules, :kind_of => Array, :default => nil, :callbacks => {
         if rule.has_key?(:action)
           return false
         end
-        # forward_port - hash with keys:
-        #   port - string \d+(-\d+)?/(tcp|udp)
-        #   to_addr - ip address string
-        #   to_port - \d+(-\d+)?
+        return false unless rule[:forward_port].is_a? Hash
+        #   port - string representing a port or port range
+        return false if rule[:forward_port][:port].match( /^\d+(-\d+)?\/(tcp|udp)$/ ).nil?
         #   to_addr, to_port, or both must be given
-        # FIXME
+        return false unless rule[:forward_port].has_key?(:to_addr) or rule[:forward_port].has_key?(:to_port)
+        if rule[:forward_port].has_key? :to_addr
+          case rule[:family]
+          when :ipv4
+            unless /^\d+\.\d+\.\d+\.\d+(\/\d+)$/.match( rule[:forward_port][:to_addr] )
+              return false
+            end
+          when :ipv6
+            unless /^[\da-fA-F:]+(\/\d+)$/.match( rule[:forward_port][:to_addr] )
+              return false
+            end
+          else
+            return false
+          end
+        end
+        if rule[:forward_port].has_key? :to_port
+          return false if rule[:forward_port][:to_port].match( /^\d+(-\d+)$/ ).nil?
+        end
       end
 
       if rule.has_key?(:log)
