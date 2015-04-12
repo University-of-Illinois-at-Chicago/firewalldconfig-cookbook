@@ -5,7 +5,7 @@
 # Copyright:: 2015, The University of Illinois at Chicago
 
 # List of all actions supported by provider
-actions :create, :create_if_missing, :delete, :filter, :merge
+actions :create, :create_if_missing, :delete, :filter, :merge, :prune
 
 # Make push the default action
 default_action :merge

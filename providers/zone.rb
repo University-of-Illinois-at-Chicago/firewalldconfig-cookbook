@@ -145,3 +145,41 @@ action :merge do
   end
 
 end
+
+action :prune do
+  current_zone = firewalldconfig_readzone( new_resource.name )
+
+  if current_zone.nil?
+    Chef::Log.debug "Firewalld zone #{ new_resource.name } not defined - nothing to prune."
+    new_resource.updated_by_last_action( false )
+  end
+
+  zone = {
+    :interfaces  => new_resource.interfaces.nil?  ? current_zone[:interfaces]  : ( current_zone[:interfaces] - new_resource.interfaces ),
+    :ports       => new_resource.ports.nil?       ? current_zone[:ports]       : ( current_zone[:ports]      - new_resource.ports      ),
+    :rules       => new_resource.rules.nil?       ? current_zone[:rules]       : ( current_zone[:rules]      - new_resource.rules      ),
+    :services    => new_resource.services.nil?    ? current_zone[:services]    : ( current_zone[:services]   - new_resource.services   ),
+    :sources     => new_resource.sources.nil?     ? current_zone[:sources]     : ( current_zone[:sources]    - new_resource.sources    ),
+  }
+
+  # Target :default means remove any special target.
+  case new_resource.target
+  when nil
+    zone[:target] = current_zone[:target]
+  when :default
+    zone.delete(:target)
+  else
+    zone[:target] = new_resource.target
+  end
+
+  if zone == current_zone
+    Chef::Log.debug "#{ new_resource.name } already pruned as specified - nothing to do."
+    new_resource.updated_by_last_action( false )
+  else
+    converge_by("Pruned firewalld zone, #{new_resource.name}, configuration at /etc/firewalld/zones/#{new_resource.name}.xml") do
+      firewalldconfig_writezone( new_resource.name, zone )
+      new_resource.updated_by_last_action( true )
+    end
+  end
+  
+end
