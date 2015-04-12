@@ -37,7 +37,7 @@ action :create do
   zone[:target] = new_resource.target unless [:default,nil].include? new_resource.target
 
   if current_zone and zone == current_zone
-    Chef::Log.debug "Firewalld zone #{ @new_resource } already created as specified - nothing to do."
+    Chef::Log.debug "Firewalld zone #{ new_resource.name } already created as specified - nothing to do."
     new_resource.updated_by_last_action( false )
   else
     converge_by("Create firewalld zone, #{new_resource.name}, configuration at /etc/firewalld/zones/#{new_resource.name}.xml") do
@@ -69,6 +69,46 @@ action :delete do
   end
 end
 
+action :filter do
+  current_zone = firewalldconfig_readzone( new_resource.name )
+
+  if current_zone.nil?
+    Chef::Log.debug "Firewalld zone #{ new_resource.name } not defined - nothing to filter."
+    new_resource.updated_by_last_action( false )
+  end
+
+  zone = {
+    :description => new_resource.description.nil? ? current_zone[:description] : new_resource.description,
+    :interfaces  => new_resource.interfaces.nil?  ? current_zone[:interfaces]  : ( current_zone[:interfaces] & new_resource.interfaces ),
+    :ports       => new_resource.ports.nil?       ? current_zone[:ports]       : ( current_zone[:ports]      & new_resource.ports      ),
+    :rules       => new_resource.rules.nil?       ? current_zone[:rules]       : ( current_zone[:rules]      & new_resource.rules      ),
+    :services    => new_resource.services.nil?    ? current_zone[:services]    : ( current_zone[:services]   & new_resource.services   ),
+    :short       => new_resource.short.nil?       ? current_zone[:short]       : new_resource.short,
+    :sources     => new_resource.sources.nil?     ? current_zone[:sources]     : ( current_zone[:sources]    & new_resource.sources    ),
+  }
+
+  # Target :default means remove any special target.
+  case new_resource.target
+  when nil
+    zone[:target] = current_zone[:target]
+  when :default
+    zone.delete(:target)
+  else
+    zone[:target] = new_resource.target
+  end
+
+  if zone == current_zone
+    Chef::Log.debug "#{ new_resource.name } already filtered as specified - nothing to do."
+    new_resource.updated_by_last_action( false )
+  else
+    converge_by("Filter firewalld zone, #{new_resource.name}, configuration at /etc/firewalld/zones/#{new_resource.name}.xml") do
+      firewalldconfig_writezone( new_resource.name, zone )
+      new_resource.updated_by_last_action( true )
+    end
+  end
+  
+end
+
 action :merge do
 
   if firewalldconfig_configured_zones.include? new_resource.name
@@ -91,7 +131,7 @@ action :merge do
     end
 
     if zone == current_zone
-      Chef::Log.debug "#{ @new_resource } already is as specified - nothing to do."
+      Chef::Log.debug "#{ new_resource.name } already is as specified - nothing to do."
       new_resource.updated_by_last_action( false )
     else
       converge_by("Merge changes into firewalld zone, #{new_resource.name}, configuration at /etc/firewalld/zones/#{new_resource.name}.xml") do
