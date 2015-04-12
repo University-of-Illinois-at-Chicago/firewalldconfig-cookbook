@@ -107,6 +107,7 @@ attribute :rules, :kind_of => Array, :default => nil, :callbacks => {
         if rule.has_key?(:action)
           return false
         end
+        # masquerade - boolean flag
         return false unless rule[:masquerade] == true
       elsif rule.has_key?(:forward_port)
         # Actions not allowed with forward-port
@@ -135,6 +136,9 @@ attribute :rules, :kind_of => Array, :default => nil, :callbacks => {
         if rule[:forward_port].has_key? :to_port
           return false if rule[:forward_port][:to_port].match( /^\d+(-\d+)$/ ).nil?
         end
+      else
+        # Must specify one of: service, port, protocol, icmp-block, masquerade, or forward-port
+        return false
       end
 
       if rule.has_key?(:log)
@@ -146,11 +150,8 @@ attribute :rules, :kind_of => Array, :default => nil, :callbacks => {
       end
 
       if rule.has_key?(:audit)
-        #  audit - boolean
-        # FIXME
-        unless [TrueClass,FalseClass].include? rule[:audit].class
-          return false
-        end
+        #  audit - boolean flag
+        return false unless rule[:audit] == true
       end
 
       if rule.has_key?(:action)
