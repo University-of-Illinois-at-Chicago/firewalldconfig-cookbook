@@ -91,34 +91,33 @@ attribute :rules, :kind_of => Array, :default => nil, :callbacks => {
       end
 
       if rule.has_key?(:service)
-        # service - string
-        # FIXME
+        return false unless firewalldconfig_service_exists? rule[:service]
       elsif rule.has_key?(:port)
-        # port - string \d+(-\d+)?/(tcp|udp)
-        # FIXME
+        return false if rule[:port].match( /^\d+\/(tcp|udp)$/ ).nil?
       elsif rule.has_key?(:protocol)
-        # protocol - string
-        # FIXME
+        return false unless firewalldconfig_protocol_exists? rule[:protocol]
       elsif rule.has_key?(:icmp_block)
-        # icmp-block - string, one of firewall-cmd --get-icmptypes
+        # Actions not allowed with icmp-block
         if rule.has_key?(:action)
           return false
         end
-        # FIXME
+        return false unless firewalldconfig_icmptype_exists? rule[:icmp_block]
       elsif rule.has_key?(:masquerade)
-        # masquerade - boolean
+        # Actions not allowed with masquerade
         if rule.has_key?(:action)
           return false
         end
-        # FIXME
+        return false unless rule[:masquerade] == true
       elsif rule.has_key?(:forward_port)
+        # Actions not allowed with forward-port
+        if rule.has_key?(:action)
+          return false
+        end
         # forward_port - hash with keys:
         #   port - string \d+(-\d+)?/(tcp|udp)
         #   to_addr - ip address string
         #   to_port - \d+(-\d+)?
-        if rule.has_key?(:action)
-          return false
-        end
+        #   to_addr, to_port, or both must be given
         # FIXME
       end
 
@@ -174,10 +173,7 @@ attribute :short, :kind_of => String, :default => nil
 attribute :services, :kind_of => Array, :default => nil, :callbacks => {
   "must be an array of service names defined for firewalld" => lambda { |services|
     for service in services
-      unless service.is_a?(String)
-        return false
-      end
-      # FIXME? - Check for valid service?
+      return false unless firewalldconfig_service_exists?(service)
     end
     return true
   }

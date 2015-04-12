@@ -10,6 +10,10 @@ def firewalldconfig_all_services
   ( firewalld_bulitin_services + firewalldconfig_configured_services ).uniq
 end
 
+def firewalldconfig_service_exists?(name)
+  return ( ::File.exists? "/etc/firewalld/services/#{name}.xml" or ::File.exists? "/usr/lib/firewalld/services/#{name}.xml" )
+end
+
 def firewalldconfig_readservice(name)
   require 'nokogiri'
 

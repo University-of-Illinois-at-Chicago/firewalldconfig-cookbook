@@ -21,7 +21,7 @@ def firewalldconfig_readzone(name)
     return nil
   end
 
-  doc = Nokogiri::XML( File.open(zone_xml) )
+  doc = Nokogiri::XML( ::File.open(zone_xml) )
   zone = {
     :description => doc.at_xpath('/zone/description').content,
     :short => doc.at_xpath('/zone/short').content,
@@ -187,4 +187,24 @@ EOF
   fh = ::File.new("/etc/firewalld/zones/#{name}.xml","w")
   doc.write_xml_to fh, :encoding => 'UTF-8'
   fh.close
+end
+
+# Function to validate protocol names in rich rules. The protocol should
+# be defined in /etc/protocols
+def firewalldconfig_protocol_exists? (name)
+  fh = ::File.open '/etc/protocols'
+  found = false
+  fh.each do |line|
+    match = line.match(/^(\S+)/)
+    if not match.nil? and name == match[1]
+      found = true
+      break
+    end
+  end
+  return found
+end
+
+# Function to validate icmptype names for rich rules.
+def firewalldconfig_icmptype_exists? (name)
+  return `firewall-cmd --get-icmptypes`.split(' ').include? name
 end
