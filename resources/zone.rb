@@ -95,7 +95,8 @@ attribute :rules, :kind_of => Array, :default => nil, :callbacks => {
       end
 
       if rule.has_key?(:service)
-        return false unless firewalldconfig_service_exists? rule[:service]
+        return false unless rule[:service].is_a? String
+        #return false unless firewalldconfig_service_exists? rule[:service]
       elsif rule.has_key?(:port)
         return false if rule[:port].match( /^\d+\/(tcp|udp)$/ ).nil?
       elsif rule.has_key?(:protocol)
@@ -197,7 +198,8 @@ attribute :short, :kind_of => String, :default => nil
 attribute :services, :kind_of => Array, :default => nil, :callbacks => {
   "must be an array of service names defined for firewalld" => lambda { |services|
     for service in services
-      return false unless firewalldconfig_service_exists?(service)
+      #return false unless firewalldconfig_service_exists?(service)
+      return false unless service.is_a? String
     end
     return true
   }
