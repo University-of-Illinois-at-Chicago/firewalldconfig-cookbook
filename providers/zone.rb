@@ -75,6 +75,7 @@ action :filter do
   if current_zone.nil?
     Chef::Log.debug "Firewalld zone #{ new_resource.name } not defined - nothing to filter."
     new_resource.updated_by_last_action( false )
+    return
   end
 
   zone = {
@@ -111,37 +112,36 @@ end
 
 action :merge do
 
-  if firewalldconfig_configured_zones.include? new_resource.name
-    current_zone = firewalldconfig_readzone( new_resource.name )
-    zone = current_zone.clone
+  unless firewalldconfig_configured_zones.include? new_resource.name
+    return action_create
+  end
 
-    zone[:description] = new_resource.description unless new_resource.description.nil?
-    zone[:interfaces]  = ( new_resource.interfaces + current_zone[:interfaces] ).uniq.sort unless new_resource.interfaces.nil?
-    zone[:ports]       = ( new_resource.ports      + current_zone[:ports]      ).uniq.sort unless new_resource.ports.nil?
-    zone[:rules]       = ( new_resource.rules      + current_zone[:rules]      ).uniq.sort unless new_resource.rules.nil?
-    zone[:services]    = ( new_resource.services   + current_zone[:services]   ).uniq.sort unless new_resource.services.nil?
-    zone[:short]       = new_resource.short unless new_resource.short.nil?
-    zone[:sources]     = ( new_resource.sources    + current_zone[:sources]    ).uniq.sort unless new_resource.sources.nil?
+  current_zone = firewalldconfig_readzone( new_resource.name )
+  zone = current_zone.clone
 
-    # Target :default means remove any special target.
-    if new_resource.target == :default
-      zone.delete(:target)
-    elsif not new_resource.target.nil?
-      zone[:target] = new_resource.target
-    end
+  zone[:description] = new_resource.description unless new_resource.description.nil?
+  zone[:interfaces]  = ( new_resource.interfaces + current_zone[:interfaces] ).uniq.sort unless new_resource.interfaces.nil?
+  zone[:ports]       = ( new_resource.ports      + current_zone[:ports]      ).uniq.sort unless new_resource.ports.nil?
+  zone[:rules]       = ( new_resource.rules      + current_zone[:rules]      ).uniq.sort { |a,b| a.to_s <=> b.to_s } unless new_resource.rules.nil?
+  zone[:services]    = ( new_resource.services   + current_zone[:services]   ).uniq.sort unless new_resource.services.nil?
+  zone[:short]       = new_resource.short unless new_resource.short.nil?
+  zone[:sources]     = ( new_resource.sources    + current_zone[:sources]    ).uniq.sort unless new_resource.sources.nil?
 
-    if zone == current_zone
-      Chef::Log.debug "#{ new_resource.name } already is as specified - nothing to do."
-      new_resource.updated_by_last_action( false )
-    else
-      converge_by("Merge changes into firewalld zone, #{new_resource.name}, configuration at /etc/firewalld/zones/#{new_resource.name}.xml") do
-        firewalldconfig_writezone( new_resource.name, zone )
-        new_resource.updated_by_last_action( true )
-      end
-    end
+  # Target :default means remove any special target.
+  if new_resource.target == :default
+    zone.delete(:target)
+  elsif not new_resource.target.nil?
+    zone[:target] = new_resource.target
+  end
 
+  if zone == current_zone
+    Chef::Log.debug "#{ new_resource.name } already is as specified - nothing to do."
+    new_resource.updated_by_last_action( false )
   else
-    action_create
+    converge_by("Merge changes into firewalld zone, #{new_resource.name}, configuration at /etc/firewalld/zones/#{new_resource.name}.xml") do
+      firewalldconfig_writezone( new_resource.name, zone )
+      new_resource.updated_by_last_action( true )
+    end
   end
 
 end
@@ -152,25 +152,20 @@ action :prune do
   if current_zone.nil?
     Chef::Log.debug "Firewalld zone #{ new_resource.name } not defined - nothing to prune."
     new_resource.updated_by_last_action( false )
+    return
   end
 
   zone = {
+    :description => current_zone[:description],
     :interfaces  => new_resource.interfaces.nil?  ? current_zone[:interfaces]  : ( current_zone[:interfaces] - new_resource.interfaces ),
     :ports       => new_resource.ports.nil?       ? current_zone[:ports]       : ( current_zone[:ports]      - new_resource.ports      ),
     :rules       => new_resource.rules.nil?       ? current_zone[:rules]       : ( current_zone[:rules]      - new_resource.rules      ),
     :services    => new_resource.services.nil?    ? current_zone[:services]    : ( current_zone[:services]   - new_resource.services   ),
+    :short       => current_zone[:short],
     :sources     => new_resource.sources.nil?     ? current_zone[:sources]     : ( current_zone[:sources]    - new_resource.sources    ),
   }
 
-  # Target :default means remove any special target.
-  case new_resource.target
-  when nil
-    zone[:target] = current_zone[:target]
-  when :default
-    zone.delete(:target)
-  else
-    zone[:target] = new_resource.target
-  end
+  zone[:target] = current_zone[:target] if current_zone.has_key? :target
 
   if zone == current_zone
     Chef::Log.debug "#{ new_resource.name } already pruned as specified - nothing to do."
