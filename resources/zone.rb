@@ -43,6 +43,7 @@ attribute :rules, :kind_of => Array, :default => nil, :callbacks => {
     for rule in rules
       #  family: ipv4 ipv6
       unless [:ipv4,:ipv6,nil].include? rule[:family]
+        warn "!! Rule has invalid family: #{family}"
         return false
       end
 
@@ -50,14 +51,17 @@ attribute :rules, :kind_of => Array, :default => nil, :callbacks => {
       if rule[:source]
         case rule[:family]
         when :ipv4
-          unless /^\d+\.\d+\.\d+\.\d+(\/\d+)$/.match( rule[:source] )
+          unless /^\d+\.\d+\.\d+\.\d+(\/\d+)?$/.match( rule[:source] )
+            warn "!! Rule has invalid source ipv4 address: #{rule[:source]}";
             return false
           end
         when :ipv6
           unless /^[\da-fA-F:]+(\/\d+)$/.match( rule[:source] )
+            warn "!! Rule has invalid source ipv6 address: #{rule[:source]}";
             return false
           end
         else
+          warn "!! Rule has source address, #{rule[:source]}, but no family was specified.";
           return false
         end
       end
@@ -167,14 +171,17 @@ attribute :rules, :kind_of => Array, :default => nil, :callbacks => {
 
         case rule[:family]
         when :ipv4
-          unless [:icmp_net_unreachable,:icmp_host_unreachable,:icmp_port_unreachable,:icmp_proto_unreachable,:icmp_net_prohibited,:icmp_host_prohibited,:icmp_admin_prohibited,:tcp_reset].include? rule[:reject_with]
+          unless %w{icmp-net-unreachable icmp-host-unreachable icmp-port-unreachable icmp-proto-unreachable icmp-net-prohibited icmp-host-prohibited icmp-admin-prohibited tcp-reset}.include? rule[:reject_with]
+            warn "!! Rule has invalid ipv4 reject type: #{rule[:reject_with]}";
             return false
           end
         when :ipv6
-          unless [:icmp6_no_route,:no_route,:icmp6_adm_prohibited,:adm_prohibited,:icmp6_addr_unreachable,:addr_unreach,:icmp6_port_unreachable,:tcp_reset].include? rule[:reject_with]
+          unless %w{icmp6-no-route no-route icmp6-adm-prohibited adm-prohibited icmp6-addr-unreachable addr-unreach icmp6-port-unreachable tcp-reset}.include? rule[:reject_with]
+            warn "!! Rule has invalid ipv6 reject type: #{rule[:reject_with]}";
             return false
           end
         else
+          warn "!! Rule has invalid reject type, #{rule[:reject_with]}, but no address family.";
           return false
         end
       end

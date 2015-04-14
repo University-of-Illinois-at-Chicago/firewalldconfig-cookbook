@@ -52,19 +52,19 @@ def firewalldconfig_readzone(name)
   doc.xpath('/zone/rule').each do |rule|
     r = {}
 
-    if rule.has_key? "family"
-      r[:family] = rule["family"].to_sym
+    unless rule[:family].nil?
+      r[:family] = rule[:family].to_sym
     end
 
-    source = rule.at_xpath('/source')
+    source = rule.at_xpath('./source')
     if source
-      r[:source] = source["address"]
-      if source["invert"] and source["invert"] =~ /^(True|yes)$/i
+      r[:source] = source[:address]
+      if source[:invert] and source[:invert] =~ /^(true|yes)$/i
         r[:source_invert] = true
       end
     end
 
-    destination = rule.at_xpath('/destination')
+    destination = rule.at_xpath('./destination')
     if destination
       r[:destination] = destination["address"]
       if destination["invert"] and destination["invert"] =~ /^(True|yes)$/i
@@ -72,26 +72,26 @@ def firewalldconfig_readzone(name)
       end
     end
 
-    service = rule.at_xpath('/service')
+    service = rule.at_xpath('./service')
     if service
       r[:service] = service["name"]
     end
 
-    port = rule.at_xpath('/port')
+    port = rule.at_xpath('./port')
     if port
       r[:port] = port["port"]+'/'+port["protocol"]
     end
 
     # FIXME protocol icmp_block masquerade forward-port log audit
 
-    if rule.at_xpath('/accept')
+    if rule.at_xpath('./accept')
       r[:action] = :accept
-    elsif rule.at_xpath('/drop')
+    elsif rule.at_xpath('./drop')
       r[:action] = :drop
-    elsif rule.at_xpath('/reject')
+    elsif rule.at_xpath('./reject')
       r[:action] = :reject
-      if rule.at_xpath('/reject')["type"]
-        r[:reject_with] = rule.at_xpath('/reject')["type"].to_sym
+      if rule.at_xpath('./reject')["type"]
+        r[:reject_with] = rule.at_xpath('./reject')["type"].to_sym
       end
     end
 
@@ -108,7 +108,7 @@ def firewalldconfig_readzone(name)
 
   zone[:interfaces].sort!.uniq!
   zone[:ports].sort!.uniq!
-  zone[:rules].sort!.uniq!
+  zone[:rules].sort!{|a,b| a.to_s <=> b.to_s}.uniq!
   zone[:services].sort!.uniq!
   zone[:sources].sort!.uniq!
 
@@ -148,32 +148,37 @@ EOF
   end
 
   zone[:rules].each do |rule|
-    node = doc.create_element "rule"
-    node[:family] = rule[:family] if rule.has_key? :family
+    rule_node = doc.create_element "rule"
+    rule_node[:family] = rule[:family] if rule.has_key? :family
     if rule[:source]
       source = doc.create_element "source", :address => rule[:source]
       source[:invert] = "True" if rule[:source_invert]
-      node.add_child source
+      rule_node.add_child source
     end
     if rule[:destination]
       destination = doce.create_element "destination", :address => rule[:destination]
       destination[:invert] = "True" if rule[:destination_invert]
-      node.add_child destination
+      rule_node.add_child destination
     end
 
     if rule[:service]
-      node.add_child doc.create_element "service", :name => rule[:service]
+      rule_node.add_child doc.create_element "service", :name => rule[:service]
     end
 
     if rule[:port]
       (port,proto) = rule[:port].split('/')
-      node.add_child doc.create_element "port", :protocol => proto, :port => port
+      rule_node.add_child doc.create_element "port", :protocol => proto, :port => port
     end
 
     if rule[:action]
-      node.add_child doc.create_element rule[:action]
+      action_node = doc.create_element rule[:action].to_s
+      if rule[:action] == :reject and rule.has_key? :reject_with
+        action_node[:type] = rule[:reject_with]
+      end
+      rule_node.add_child action_node
     end
 
+    root.add_child rule_node
   end
 
   zone[:services].each do |name|
