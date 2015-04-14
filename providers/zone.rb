@@ -12,7 +12,7 @@ action :create do
     :description => new_resource.description,
     :interfaces  => ( new_resource.interfaces || [] ).uniq.sort,
     :ports       => ( new_resource.ports      || [] ).uniq.sort,
-    :rules       => ( new_resource.rules      || [] ).uniq.sort,
+    :rules       => ( new_resource.rules      || [] ).uniq.sort{ |a,b| a.to_s <=> b.to_s },
     :services    => ( new_resource.services   || [] ).uniq.sort,
     :short       => new_resource.short,
     :sources     => ( new_resource.sources    || [] ).uniq.sort,
