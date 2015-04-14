@@ -75,7 +75,7 @@ action :filter do
   if current_zone.nil?
     Chef::Log.debug "Firewalld zone #{ new_resource.name } not defined - nothing to filter."
     new_resource.updated_by_last_action( false )
-    return
+    next
   end
 
   zone = {
@@ -113,7 +113,8 @@ end
 action :merge do
 
   unless firewalldconfig_configured_zones.include? new_resource.name
-    return action_create
+    action_create
+    next
   end
 
   current_zone = firewalldconfig_readzone( new_resource.name )
@@ -152,7 +153,7 @@ action :prune do
   if current_zone.nil?
     Chef::Log.debug "Firewalld zone #{ new_resource.name } not defined - nothing to prune."
     new_resource.updated_by_last_action( false )
-    return
+    next
   end
 
   zone = {
