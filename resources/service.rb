@@ -11,18 +11,20 @@ actions :create, :create_if_missing
 default_action :create
 
 # Required attributes
-attribute :name, :kind_of => String, :name_attribute => true
+attribute :name, kind_of: String, name_attribute: true
 
 # Optional attributes
-attribute :description, :kind_of => String, :default => nil
-attribute :ports, :kind_of => Array, :default => nil, :callbacks => {
-  "must be an array of strings with the format portid[-portid]/protocol" => lambda { |ports|
-    for port in ports
-      unless port.is_a?(String) and /^\d+(-\d+)?\/(tcp|udp)$/.match(port)
-        return false
-      end
-    end
-    return true
-  }
+attribute :description, kind_of: String
+attribute :ports, kind_of: Array, callbacks: {
+  'must be an array of strings with the format portid[-portid]/protocol' =>
+    ->(ports) { validate_ports(ports) }
 }
-attribute :short, :kind_of => String, :default => nil
+attribute :short, kind_of: String
+
+private
+
+def self.validate_ports(ports)
+  ports.reject do |port|
+    port.is_a?(String) && /^\d+(-\d+)?\/(tcp|udp)$/.match(port)
+  end.empty?
+end

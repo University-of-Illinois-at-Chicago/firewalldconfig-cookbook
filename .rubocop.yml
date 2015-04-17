@@ -1,0 +1,5 @@
+#
+# we like our neatly-aligned code too much
+#
+SingleSpaceBeforeFirstArg:
+  Enabled: false

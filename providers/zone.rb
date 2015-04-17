@@ -4,178 +4,306 @@
 #
 # Copyright:: 2015, The University of Illinois at Chicago
 
-
 action :create do
-
-  current_zone = firewalldconfig_readzone( new_resource.name )
-  zone = {
-    :description => new_resource.description,
-    :interfaces  => ( new_resource.interfaces || [] ).uniq.sort,
-    :ports       => ( new_resource.ports      || [] ).uniq.sort,
-    :rules       => ( new_resource.rules      || [] ).uniq.sort{ |a,b| a.to_s <=> b.to_s },
-    :services    => ( new_resource.services   || [] ).uniq.sort,
-    :short       => new_resource.short,
-    :sources     => ( new_resource.sources    || [] ).uniq.sort,
-  }
-
-  if zone[:description].nil?
-    if current_zone and current_zone.has_key? :description
-      zone[:description] = current_zone[:description]
-    else
-      zone[:description] = "#{new_resource.name} firewall zone."
-    end
-  end
-
-  if zone[:short].nil?
-    if current_zone and current_zone.has_key? :short
-      zone[:short] = current_zone[:short]
-    else
-      zone[:short] = new_resource.name
-    end
-  end
-
-  zone[:target] = new_resource.target unless [:default,nil].include? new_resource.target
-
-  if current_zone and zone == current_zone
-    Chef::Log.debug "Firewalld zone #{ new_resource.name } already created as specified - nothing to do."
-    new_resource.updated_by_last_action( false )
-  else
-    converge_by("Create firewalld zone, #{new_resource.name}, configuration at /etc/firewalld/zones/#{new_resource.name}.xml") do
-      firewalldconfig_writezone( new_resource.name, zone )
-      new_resource.updated_by_last_action( true )
-    end
-  end
-
+  current = firewalldconfig_read_zone_xml(new_resource.name)
+  current = {
+    short:       new_resource.name,
+    description: "#{new_resource.name} firewalld zone.",
+    interfaces:  [],
+    ports:       [],
+    rules:       [],
+    services:    [],
+    sources:     []
+  } if current.nil?
+  new_resource.updated_by_last_action(update_zone(current, ->(_o, u) { u }))
 end
 
 action :create_if_missing do
-  if ::File.exists? "/etc/firewalld/zones/#{new_resource.name}.xml"
-    Chef::Log.debug("firewalld zone, #{new_resource.name}, already configured at /etc/firewalld/zones/#{new_resource.name}.xml")
-    new_resource.updated_by_last_action( false )
-  else
-    action_create
+  if ::File.file? new_resource.file_path
+    Chef::Log.debug "firewalld zone #{new_resource.name} already configured."
+    new_resource.updated_by_last_action(false)
+    next
   end
+
+  action_create
 end
 
 action :delete do
-  if ::File.exists? "/etc/firewalld/zones/#{new_resource.name}.xml"
-    converge_by("Remove firewalld zone, #{new_resource.name}, configuration at /etc/firewalld/zones/#{new_resource.name}.xml") do
-      ::File.unlink "/etc/firewalld/zones/#{new_resource.name}.xml"
-      new_resource.updated_by_last_action( true )
+  if ::File.file? new_resource.file_path
+    converge_by(
+      "remove firewalld zone #{new_resource.name} "\
+      "from #{new_resource.file_path}"
+    ) do
+      ::File.unlink new_resource.file_path
+      new_resource.updated_by_last_action(true)
     end
   else
-    Chef::Log.debug("firewalld zone, #{new_resource.name}, not configured - nothing to do")
-    new_resource.updated_by_last_action( false )
+    Chef::Log.debug "firewalld zone, #{new_resource.name} not configured"
+    new_resource.updated_by_last_action(false)
   end
 end
 
 action :filter do
-  current_zone = firewalldconfig_readzone( new_resource.name )
+  current = firewalldconfig_read_zone_xml(new_resource.name)
 
-  if current_zone.nil?
-    Chef::Log.debug "Firewalld zone #{ new_resource.name } not defined - nothing to filter."
-    new_resource.updated_by_last_action( false )
+  if current.nil?
+    Chef::Log.debug "filter firewalld zone #{ new_resource.name } not defined"
+    new_resource.updated_by_last_action(false)
     next
   end
 
-  zone = {
-    :description => new_resource.description.nil? ? current_zone[:description] : new_resource.description,
-    :interfaces  => new_resource.interfaces.nil?  ? current_zone[:interfaces]  : ( current_zone[:interfaces] & new_resource.interfaces ),
-    :ports       => new_resource.ports.nil?       ? current_zone[:ports]       : ( current_zone[:ports]      & new_resource.ports      ),
-    :rules       => new_resource.rules.nil?       ? current_zone[:rules]       : ( current_zone[:rules]      & new_resource.rules      ),
-    :services    => new_resource.services.nil?    ? current_zone[:services]    : ( current_zone[:services]   & new_resource.services   ),
-    :short       => new_resource.short.nil?       ? current_zone[:short]       : new_resource.short,
-    :sources     => new_resource.sources.nil?     ? current_zone[:sources]     : ( current_zone[:sources]    & new_resource.sources    ),
-  }
-
-  # Target :default means remove any special target.
-  case new_resource.target
-  when nil
-    zone[:target] = current_zone[:target]
-  when :default
-    zone.delete(:target)
-  else
-    zone[:target] = new_resource.target
-  end
-
-  if zone == current_zone
-    Chef::Log.debug "#{ new_resource.name } already filtered as specified - nothing to do."
-    new_resource.updated_by_last_action( false )
-  else
-    converge_by("Filter firewalld zone, #{new_resource.name}, configuration at /etc/firewalld/zones/#{new_resource.name}.xml") do
-      firewalldconfig_writezone( new_resource.name, zone )
-      new_resource.updated_by_last_action( true )
-    end
-  end
-  
+  new_resource.updated_by_last_action(update_zone(current, ->(o, u) { o & u }))
 end
 
 action :merge do
-
   unless firewalldconfig_configured_zones.include? new_resource.name
     action_create
     next
   end
-
-  current_zone = firewalldconfig_readzone( new_resource.name )
-  zone = current_zone.clone
-
-  zone[:description] = new_resource.description unless new_resource.description.nil?
-  zone[:interfaces]  = ( new_resource.interfaces + current_zone[:interfaces] ).uniq.sort unless new_resource.interfaces.nil?
-  zone[:ports]       = ( new_resource.ports      + current_zone[:ports]      ).uniq.sort unless new_resource.ports.nil?
-  zone[:rules]       = ( new_resource.rules      + current_zone[:rules]      ).uniq.sort { |a,b| a.to_s <=> b.to_s } unless new_resource.rules.nil?
-  zone[:services]    = ( new_resource.services   + current_zone[:services]   ).uniq.sort unless new_resource.services.nil?
-  zone[:short]       = new_resource.short unless new_resource.short.nil?
-  zone[:sources]     = ( new_resource.sources    + current_zone[:sources]    ).uniq.sort unless new_resource.sources.nil?
-
-  # Target :default means remove any special target.
-  if new_resource.target == :default
-    zone.delete(:target)
-  elsif not new_resource.target.nil?
-    zone[:target] = new_resource.target
-  end
-
-  if zone == current_zone
-    Chef::Log.debug "#{ new_resource.name } already is as specified - nothing to do."
-    new_resource.updated_by_last_action( false )
-  else
-    converge_by("Merge changes into firewalld zone, #{new_resource.name}, configuration at /etc/firewalld/zones/#{new_resource.name}.xml") do
-      firewalldconfig_writezone( new_resource.name, zone )
-      new_resource.updated_by_last_action( true )
-    end
-  end
-
+  current = firewalldconfig_read_zone_xml(new_resource.name)
+  new_resource.updated_by_last_action(update_zone(current, ->(o, u) { o + u }))
 end
 
 action :prune do
-  current_zone = firewalldconfig_readzone( new_resource.name )
+  current = firewalldconfig_read_zone_xml(new_resource.name)
 
-  if current_zone.nil?
-    Chef::Log.debug "Firewalld zone #{ new_resource.name } not defined - nothing to prune."
-    new_resource.updated_by_last_action( false )
+  if current.nil?
+    Chef::Log.debug "Firewalld zone #{ new_resource.name } not defined."
+    new_resource.updated_by_last_action(false)
     next
   end
 
-  zone = {
-    :description => current_zone[:description],
-    :interfaces  => new_resource.interfaces.nil?  ? current_zone[:interfaces]  : ( current_zone[:interfaces] - new_resource.interfaces ),
-    :ports       => new_resource.ports.nil?       ? current_zone[:ports]       : ( current_zone[:ports]      - new_resource.ports      ),
-    :rules       => new_resource.rules.nil?       ? current_zone[:rules]       : ( current_zone[:rules]      - new_resource.rules      ),
-    :services    => new_resource.services.nil?    ? current_zone[:services]    : ( current_zone[:services]   - new_resource.services   ),
-    :short       => current_zone[:short],
-    :sources     => new_resource.sources.nil?     ? current_zone[:sources]     : ( current_zone[:sources]    - new_resource.sources    ),
-  }
+  new_resource.updated_by_last_action(update_zone(current, ->(o, u) { o - u }))
+end
 
-  zone[:target] = current_zone[:target] if current_zone.has_key? :target
-
-  if zone == current_zone
-    Chef::Log.debug "#{ new_resource.name } already pruned as specified - nothing to do."
-    new_resource.updated_by_last_action( false )
-  else
-    converge_by("Pruned firewalld zone, #{new_resource.name}, configuration at /etc/firewalld/zones/#{new_resource.name}.xml") do
-      firewalldconfig_writezone( new_resource.name, zone )
-      new_resource.updated_by_last_action( true )
-    end
+def apply_single_attrs(zone)
+  # Single attribute values.
+  [:description, :short, :target].each do |attr|
+    val = new_resource.method(attr).call
+    next if val.nil?
+    zone[attr] = val
   end
-  
+end
+
+# # rubocop:disable MethodLength
+# def attr_list_combine(zone, attr, val, action)
+#   case action
+#   when :create
+#     zone[attr] = val
+#   when :filter
+#     zone[attr] &= val
+#   when :merge
+#     zone[attr] += val
+#   when :prune
+#     zone[attr] -= val
+#   end
+#   zone[attr].sort! { |a, b| a.to_s <=> b.to_s }
+#   zone[attr].uniq!
+# end
+# # rubocop:enable MethodLength
+
+def apply_plural_attrs(zone, array_merge)
+  # Array attribute values.
+  [:interfaces, :ports, :rules, :services, :sources].each do |attr|
+    val = new_resource.method(attr).call
+    next if val.nil?
+    zone[attr] = array_merge.call zone[attr], val
+    zone[attr].sort! { |a, b| a.to_s <=> b.to_s }.uniq!
+  end
+end
+
+def build_zone(current_zone, array_merge)
+  zone = current_zone.clone
+
+  apply_single_attrs zone
+  apply_plural_attrs zone, array_merge
+
+  # Target :default means remove any special target.
+  zone.delete(:target) if zone[:target] == :default
+
+  zone
+end
+
+def update_zone(current_zone, array_merge)
+  zone = build_zone current_zone, array_merge
+  if zone == current_zone
+    Chef::Log.debug "#{action} #{ new_resource.name } already as specified."
+    return false
+  else
+    converge_zone(zone, action)
+    return true
+  end
+end
+
+def converge_zone(zone, action)
+  converge_by(
+    "#{action} firewalld zone #{new_resource.name} at #{new_resource.file_path}"
+  ) do
+    write_zone_xml zone
+    new_resource.updated_by_last_action(true)
+  end
+end
+
+def write_zone_xml(zone)
+  doc = zone_doc_init(zone)
+  zone_doc_set_target(zone, doc)
+  zone_doc_add_interfaces(zone, doc)
+  zone_doc_add_ports(zone, doc)
+  zone_doc_add_rules(zone, doc)
+  zone_doc_add_services(zone, doc)
+  zone_doc_add_sources(zone, doc)
+  write_zone_doc(doc)
+end
+
+def write_zone_doc(doc)
+  fh = ::File.new(new_resource.file_path, 'w')
+  doc.write_xml_to fh, encoding: 'UTF-8', indent: 2
+  fh.close
+end
+
+def zone_doc_init(zone)
+  doc = Nokogiri::XML(<<EOF) { |x| x.noblanks }
+<?xml version="1.0" encoding="utf-8"?>
+<zone>
+  <short></short>
+  <description></description>
+</zone>
+EOF
+  doc.at_xpath('/zone/short').content = zone[:short]
+  doc.at_xpath('/zone/description').content = zone[:description]
+  doc
+end
+
+def zone_doc_set_target(zone, doc)
+  case zone[:target]
+  when :accept
+    doc.root[:target] = 'ACCEPT'
+  when :drop
+    doc.root[:target] = 'DROP'
+  when :reject
+    doc.root[:target] = '%%REJECT%%'
+  end
+end
+
+def zone_doc_add_interfaces(zone, doc)
+  zone[:interfaces].each do |name|
+    e = doc.create_element(
+      'interface',
+      name: name
+    )
+    doc.root.add_child e
+  end
+end
+
+def zone_doc_add_ports(zone, doc)
+  zone[:ports].each do |port|
+    (port, proto) = port.split('/')
+    e = doc.create_element(
+      'port',
+      protocol: proto,
+      port: port
+    )
+    doc.root.add_child e
+  end
+end
+
+def zone_doc_add_rules(zone, doc)
+  zone[:rules].each do |rule|
+    e = doc.create_element 'rule'
+    zone_doc_rule_set(rule, e)
+    doc.root.add_child e
+  end
+end
+
+def zone_doc_rule_set(rule, element)
+  zone_doc_rule_set_family(rule, element)
+  zone_doc_rule_set_source(rule, element)
+  zone_doc_rule_set_destination(rule, element)
+  zone_doc_rule_set_service(rule, element)
+  zone_doc_rule_set_port(rule, element)
+  zone_doc_rule_set_protocol(rule, element)
+  zone_doc_rule_set_action(rule, element)
+end
+
+def zone_doc_rule_set_family(rule, element)
+  return unless rule.key? :family
+  element[:family] = rule[:family] if rule.key? :family
+end
+
+def zone_doc_rule_set_source(rule, element)
+  return unless rule.key? :source
+  e = element.document.create_element(
+    'source',
+    address: rule[:source]
+  )
+  e[:invert] = 'True' if rule[:source_invert]
+  element.add_child e
+end
+
+def zone_doc_rule_set_destination(rule, element)
+  return unless rule.key? :destination
+  e = element.document.create_element(
+    'destination',
+    address: rule[:destination]
+  )
+  e[:invert] = 'True' if rule[:destination_invert]
+  element.add_child e
+end
+
+def zone_doc_rule_set_service(rule, element)
+  return unless rule.key? :service
+  e = element.document.create_element(
+    'service',
+    name: rule[:service]
+  )
+  element.add_child e
+end
+
+def zone_doc_rule_set_port(rule, element)
+  return unless rule.key? :port
+  (port, proto) = rule[:port].split('/')
+  e = element.document.create_element(
+    'port',
+    protocol: proto,
+    port: port
+  )
+  element.add_child e
+end
+
+def zone_doc_rule_set_protocol(rule, element)
+  return unless rule.key? :protocol
+  e = element.document.create_element(
+    'protocol',
+    value: rule[:protocol]
+  )
+  element.add_child e
+end
+
+def zone_doc_rule_set_action(rule, element)
+  return unless rule.key? :action
+  e = element.document.create_element rule[:action].to_s
+  if rule[:action] == :reject && rule.key?(:reject_with)
+    e[:type] = rule[:reject_with]
+  end
+  element.add_child e
+end
+
+def zone_doc_add_services(zone, doc)
+  zone[:services].each do |name|
+    e = doc.create_element(
+      'service',
+      name: name
+    )
+    doc.root.add_child e
+  end
+end
+
+def zone_doc_add_sources(zone, doc)
+  zone[:sources].each do |addr|
+    e = doc.create_element(
+      'source',
+      address: addr
+    )
+    doc.root.add_child e
+  end
 end
