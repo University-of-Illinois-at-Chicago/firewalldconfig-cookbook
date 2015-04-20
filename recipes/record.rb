@@ -4,20 +4,20 @@
 #
 # Copyright:: 2015, The University of Illinois at Chicago
 
-firewalldconfig_readconf.each do |k, v|
+Chef::Provider::Firewalldconfig.read_conf.each do |k, v|
   node.set['firewalld'][k] = v
 end
 
 node.set['firewalld']['services'] = {}
-firewalldconfig_configured_services.each do |service|
-  node.set['firewalld']['services'][service] =
-    firewalldconfig_read_service_xml(service)
+Chef::Provider::FirewalldconfigService.configured.each do |name|
+  node.set['firewalld']['services'][name] =
+    Chef::Provider::FirewalldconfigService.read_configuration(name)
 end
 
 node.set['firewalld']['zones'] = {}
-firewalldconfig_configured_zones.each do |zone|
-  node.set['firewalld']['zones'][zone] =
-    firewalldconfig_read_zone_xml(zone)
+Chef::Provider::FirewalldconfigZone.configured.each do |name|
+  node.set['firewalld']['zones'][name] =
+    Chef::Provider::FirewalldconfigZone.read_configuration(name)
 end
 
 node.save

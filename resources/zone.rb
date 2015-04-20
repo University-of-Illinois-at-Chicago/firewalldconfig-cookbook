@@ -4,18 +4,24 @@
 #
 # Copyright:: 2015, The University of Illinois at Chicago
 
-# List of all actions supported by provider
 actions :create, :create_if_missing, :delete, :filter, :merge, :prune
-
-# Make push the default action
 default_action :merge
 
-# Required attributes
+state_attrs :name,
+            :description,
+            :interfaces,
+            :ports,
+            :rules,
+            :services,
+            :short,
+            :sources,
+            :target
+
+# Name attribute
 attribute :name, kind_of: String, name_attribute: true
 
 # Optional attributes
 attribute :description, kind_of: String
-attribute :file_path, kind_of: String
 
 attribute :interfaces, kind_of: Array, callbacks: {
   'must be an array of network interface names' =>
@@ -92,8 +98,6 @@ attribute :rules, kind_of: Array, callbacks: {
     ->(rules) { validate_rules_reject_with(rules) }
 }
 
-attribute :short, kind_of: String
-
 attribute :services, kind_of: Array, callbacks: {
   'must be an array of service names defined for firewalld' =>
   lambda do |services|
@@ -107,6 +111,8 @@ attribute :services, kind_of: Array, callbacks: {
   end
 }
 
+attribute :short, kind_of: String
+
 attribute :sources, kind_of: Array, callbacks: {
   'must be an array of network subnets in CIDR format' =>
   lambda do |sources|
@@ -119,21 +125,35 @@ attribute :sources, kind_of: Array, callbacks: {
 }
 
 attribute :target, kind_of: Symbol, callbacks: {
-  'must be one of :default, :accept, :drop, :reject' => lambda do |target|
-    [:default, :accept, :drop, :reject].include? target
+  'must be one of "default", "accept", "drop", "reject"' => lambda do |target|
+    %w(default accept drop reject).include? target
   end
 }
 
-def file_path(arg = nil)
-  unless arg.nil? && @file_name.nil?
-    set_or_return :file_name, arg, kind_of: String
+def ==(other)
+  return false unless name == other.name
+  self.class.state_attrs.each do |a|
+    return false unless method(a).call == other.method(a).call
   end
-  "/etc/firewalld/zones/#{name}.xml"
+  true
+end
+
+def file_path
+  "#{Chef::Provider::Firewalldconfig.etc_dir}/zones/#{name}.xml"
+end
+
+def configured
+  ::File.file? file_path
+end
+
+def exists
+  return true if configured
+  ::File.file? "#{Chef::Provider::Firewalldconfig.lib_dir}/zones/#{name}.xml"
 end
 
 private
 
-VALID_ADDRESS_FAMILIES = [:ipv4, :ipv6]
+VALID_ADDRESS_FAMILIES = %(ipv4 ipv6)
 RICHRULE_SINGLE_ELEMENTS = [
   :service,
   :port,
@@ -209,9 +229,9 @@ end
 
 def self.validate_ip_address(addr, family)
   case family
-  when :ipv4
+  when 'ipv4'
     return /^\d+\.\d+\.\d+\.\d+(\/\d+)?$/.match(addr)
-  when :ipv6
+  when 'ipv6'
     return /^[\da-fA-F:]+(\/\d+)$/.match(addr)
   else
     return false
@@ -341,7 +361,7 @@ end
 def self.validate_rules_action(rules)
   rules.reject do |rule|
     next true unless rule.key? :action
-    [:accept, :reject, :drop].include? rule[:action]
+    %w(accept reject drop).include? rule[:action]
   end.empty?
 end
 
@@ -354,9 +374,9 @@ end
 
 def self.validate_reject_type(reject_type, family)
   case family
-  when :ipv4
+  when 'ipv4'
     IPV4_REJECT_TYPES.include? reject_type
-  when :ipv6
+  when 'ipv6'
     IPV6_REJECT_TYPES.include? reject_type
   else
     false

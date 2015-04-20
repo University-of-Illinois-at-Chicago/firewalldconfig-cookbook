@@ -4,19 +4,17 @@
 #
 # Copyright:: 2015, The University of Illinois at Chicago
 
+def whyrun_supported?
+  true
+end
+
 action :create do
-  current_service = firewalldconfig_read_service_xml(new_resource.name)
-  current_service ||= {
-    short:       new_resource.name,
-    description: "#{new_resource.name} firewalld service.",
-    ports:       []
-  }
-  new_resource.updated_by_last_action(update_service(current_service, :create))
+  new_resource.updated_by_last_action(merge_and_converge)
 end
 
 action :create_if_missing do
-  if ::File.file? service_xml
-    Chef::Log.debug("service #{new_resource.name} already configured.")
+  if @current_resource.configured
+    Chef::Log.debug "firewalld service #{new_resource.name} already configured."
     new_resource.updated_by_last_action(false)
     next
   end
@@ -25,20 +23,127 @@ action :create_if_missing do
 end
 
 action :delete do
-  if ::File.file? service_xml
-    converge_by(
-      "remove firewalld service #{new_resource.name} from #{service_xml}"
-    ) do
-      ::File.unlink service_xml
-      new_resource.updated_by_last_action(true)
-    end
-  else
-    Chef::Log.debug "firewalld service, #{new_resource.name} not configured"
+  unless @current_resource.configured
+    Chef::Log.debug(
+      "firewalld service #{new_resource.name} not configured"
+    )
     new_resource.updated_by_last_action(false)
+    next
+  end
+
+  converge_by(
+    "remove firewalld service #{new_resource.name} "\
+    "from #{new_resource.file_path}"
+  ) do
+    ::File.unlink new_resource.file_path
+    new_resource.updated_by_last_action(true)
   end
 end
 
-def use_standard_service_ports(service)
+def self.builtin
+  ::Dir.entries(
+    "#{Chef::Provider::Firewalldconfig.lib_dir}/services"
+  ).grep(/^[a-zA-Z].*\.xml$/).collect { |s| s[0..-5] }
+end
+
+def self.configured
+  ::Dir.entries(
+    "#{Chef::Provider::Firewalldconfig.etc_dir}/services"
+  ).grep(/^[a-zA-Z].*\.xml$/).collect { |s| s[0..-5] }
+end
+
+def self.read_configuration(name)
+  doc = parse_configuration_xml name
+  return nil if doc.nil?
+  doc_to_attributes(doc)
+end
+
+def self.parse_configuration_xml(name)
+  require 'nokogiri'
+  [
+    Chef::Provider::Firewalldconfig.etc_dir,
+    Chef::Provider::Firewalldconfig.lib_dir
+  ].each do |dir|
+    xml_path = "#{dir}/services/#{name}.xml"
+    next unless ::File.file? xml_path
+    return Nokogiri::XML(::File.open(xml_path))
+  end
+  nil
+end
+
+def self.doc_to_attributes(doc)
+  attributes = doc_to_attributes_init(doc)
+  doc_to_attributes_get_ports(doc, attributes)
+  attributes
+end
+
+def self.doc_to_attributes_init(doc)
+  {
+    description: doc.at_xpath('/service/description').content,
+    short: doc.at_xpath('/service/short').content,
+    ports: []
+  }
+end
+
+def self.doc_to_attributes_get_ports(doc, attributes)
+  doc.xpath('/service/port').each do |port|
+    attributes[:ports].push(port['port'] + '/' + port['protocol'])
+  end
+  attributes[:ports].sort!.uniq!
+end
+
+def load_current_resource
+  @current_resource = Chef::Resource::FirewalldconfigService.new(
+    @new_resource.name
+  )
+  @current_resource.name(@new_resource.name)
+  conf = self.class.read_configuration(@current_resource.name)
+  if conf
+    conf.each do |a, v|
+      @current_resource.method(a).call(v)
+    end
+  else
+    @current_resource.short(@new_resource.name)
+    @current_resource.description("#{@new_resource.name} firewalld service.")
+    @current_resource.ports([])
+  end
+end
+
+def merge_current_into_new
+  @new_resource.description(
+    @current_resource.description
+  ) if @new_resource.description.nil?
+  @new_resource.ports(
+    @current_resource.ports.clone
+  ) if @new_resource.ports.nil?
+  @new_resource.short(
+    @current_resource.short
+  ) if @new_resource.short.nil?
+end
+
+def merge_and_converge
+  # Add standard ports if new lacks them
+  add_standard_service_ports if new_resource.ports.nil?
+
+  # Fill out any missing values in @new_resource from @current_resource
+  merge_current_into_new
+
+  if @new_resource == @current_resource
+    Chef::Log.debug "#{action} #{ new_resource.name } already as specified."
+    return false
+  end
+
+  converge_by(
+    "#{action} firewalld service #{new_resource.name} "\
+    "at #{new_resource.file_path}"
+  ) do
+    write_service_xml
+    new_resource.updated_by_last_action(true)
+  end
+  true
+end
+
+def add_standard_service_ports
   ports = []
   %w(tcp udp).each do |proto|
     port = Socket.getservbyname(new_resource.name, proto)
@@ -47,66 +152,36 @@ def use_standard_service_ports(service)
   if ports.empty?
     fail "Unable to determine ports for service #{new_resource.name}"
   end
-  service[:ports] = ports
+  new_resource.ports(ports.uniq.sort)
 end
 
-def build_service(current_service)
-  service = current_service.clone
-  [:description, :short, :ports].each do |attr|
-    val = new_resource.method(attr).call
-    next if val.nil?
-    service[attr] = val
-  end
-  use_standard_service_ports service if new_resource.ports.nil?
-  service[:ports].sort!.uniq!
-  service
-end
-
-def update_service(current_service, action)
-  service = build_service current_service
-  if service == current_service
-    Chef::Log.debug "#{action} #{ new_resource.name } already as specified."
-    return false
-  else
-    converge_service(service, action)
-    return true
-  end
-end
-
-def converge_service(service, action)
-  converge_by(
-    "#{action} firewalld service #{new_resource.name} at #{service_xml}"
-  ) do
-    write_service_xml(service)
-    new_resource.updated_by_last_action(true)
-  end
-end
-
-def service_xml
-  "/etc/firewalld/services/#{new_resource.name}.xml"
-end
-
-def write_service_xml(service)
-  doc = service_doc_init(service)
-  service_doc_add_ports(service, doc)
+def write_service_xml
+  doc = service_doc_init
+  service_doc_add_ports(doc)
   write_service_doc(doc)
 end
 
-def service_doc_init(service)
-  doc = Nokogiri::XML::Document.parse(<<EOF)
+def write_service_doc(doc)
+  fh = ::File.new(new_resource.file_path, 'w')
+  doc.write_xml_to fh, encoding: 'UTF-8'
+  fh.close
+end
+
+def service_doc_init
+  doc = Nokogiri::XML(<<EOF) { |x| x.noblanks }
 <?xml version="1.0" encoding="utf-8"?>
 <service>
   <short></short>
   <description></description>
 </service>
 EOF
-  doc.at_xpath('/service/short').content = service[:short]
-  doc.at_xpath('/service/description').content = service[:description]
+  doc.at_css('/service/short').content = @new_resource.short
+  doc.at_css('/service/description').content = @new_resource.description
   doc
 end
 
-def service_doc_add_ports(service, doc)
-  service[:ports].each do |port|
+def service_doc_add_ports(doc)
+  @new_resource.ports.each do |port|
     (port, proto) = port.split('/')
     e = doc.create_element(
       'port',
@@ -115,10 +190,4 @@ def service_doc_add_ports(service, doc)
     )
     doc.root.add_child e
   end
-end
-
-def write_service_doc(doc)
-  fh = ::File.new(service_xml, 'w')
-  doc.write_xml_to fh, encoding: 'UTF-8'
-  fh.close
 end

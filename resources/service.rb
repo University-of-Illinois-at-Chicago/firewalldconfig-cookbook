@@ -4,11 +4,13 @@
 #
 # Copyright:: 2015, The University of Illinois at Chicago
 
-# List of all actions supported by provider
-actions :create, :create_if_missing
-
-# Make push the default action
+actions :create, :create_if_missing, :delete
 default_action :create
+
+state_attrs :name,
+            :description,
+            :ports,
+            :short
 
 # Required attributes
 attribute :name, kind_of: String, name_attribute: true
@@ -20,6 +22,27 @@ attribute :ports, kind_of: Array, callbacks: {
     ->(ports) { validate_ports(ports) }
 }
 attribute :short, kind_of: String
+
+def ==(other)
+  return false unless name == other.name
+  self.class.state_attrs.each do |a|
+    return false unless method(a).call == other.method(a).call
+  end
+  true
+end
+
+def file_path
+  "#{Chef::Provider::Firewalldconfig.etc_dir}/services/#{name}.xml"
+end
+
+def configured
+  ::File.file? file_path
+end
+
+def exists
+  return true if configured
+  ::File.file? "#{Chef::Provider::Firewalldconfig.lib_dir}/services/#{name}.xml"
+end
 
 private
 

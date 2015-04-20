@@ -3,3 +3,7 @@
 #
 SingleSpaceBeforeFirstArg:
   Enabled: false
+Metrics/AbcSize:
+  Max: 30
+Metrics/MethodLength:
+  Max: 25

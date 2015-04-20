@@ -6,29 +6,31 @@
 
 include_recipe 'firewalldconfig'
 
-c = Chef::Resource::Firewalldconfig.new(
-  '/etc/firewalld/firewalld.conf',
-  run_context)
-Chef::Resource::Firewalldconfig.state_attrs.each do |k|
-  c.method(k).call(node['firewalld'][k]) if node['firewalld'].key? k
+firewalldconfig 'firewalld.conf' do
+  action :merge
+  notifies :run, 'execute[firewalld-reload]'
+  node['firewalld'].each do |k, v|
+    next if v.is_a?(Hash) || v.is_a?(Array)
+    method(k).call v
+  end
 end
-c.notifies_delayed(:reload, 'service[firewalld]')
-c.run_action(:configure)
 
 node['firewalld']['services'].each do |name, settings|
-  s = Chef::Resource::FirewalldconfigService.new(name, run_context)
-  settings.each do |k, v|
-    s.method(k.to_sym).call(v)
+  firewalldconfig_service name do
+    action :create
+    notifies :run, 'execute[firewalld-reload]'
+    SymbolizeHelper.symbolize_recursive(settings).each do |k, v|
+      method(k).call v
+    end
   end
-  s.notifies_delayed(:reload, 'service[firewalld]')
-  s.run_action(:create)
 end
 
 node['firewalld']['zones'].each do |name, settings|
-  z = Chef::Resource::FirewalldconfigZone.new(name, run_context)
-  settings.each do |k, v|
-    z.method(k.to_sym).call(v)
+  firewalldconfig_zone name do
+    action :create
+    notifies :run, 'execute[firewalld-reload]'
+    SymbolizeHelper.symbolize_recursive(settings).each do |k, v|
+      method(k).call v
+    end
   end
-  z.notifies_delayed(:reload, 'service[firewalld]')
-  z.run_action(:create)
 end

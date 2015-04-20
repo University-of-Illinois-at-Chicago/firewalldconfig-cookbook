@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<zone>
+  <short>Campus</short>
+  <description>University campus networks.</description>
+  <source address="128.248.0.0/16"/>
+  <source address="131.193.0.0/16"/>
+  <service name="http"/>
+  <service name="https"/>
+  <service name="ssh"/>
+  <port port="10443" protocol="tcp"/>
+  <rule family="ipv4">
+    <source address="128.248.0.0/16" invert="True"/>
+    <service name="mysql"/>
+    <reject type="icmp-port-unreachable"/>
+  </rule>
+  <rule family="ipv4">
+    <source address="128.248.155.0/24"/>
+    <service name="mysql"/>
+    <accept/>
+  </rule>
+  <rule family="ipv4">
+    <source address="131.193.99.88"/>
+    <port protocol="tcp" port="8443"/>
+    <accept/>
+  </rule>
+<!--
+  <rule [family="ipv4|ipv6"]>
+  [ <source address="address[/mask]" [invert="True"]/> ]
+  [ <destination address="address[/mask]" [invert="True"]/> ]
+  [
+    <service name="string"/> |
+    <port port="portid[-portid]" protocol="tcp|udp"/> |
+    <protocol value="protocol"/> |
+    <icmp-block name="icmptype"/> |
+    <masquerade/> |
+    <forward-port port="portid[-portid]" protocol="tcp|udp" [to-port="portid[-portid]"] [to-addr="address"]/>
+  ]
+  [ <log [prefix="prefixtext"] [level="emerg|alert|crit|err|warn|notice|info|debug"]> [<limit value="rate/duration"/>] </log> ]
+  [ <audit> [<limit value="rate/duration"/>] </audit> ]
+  [
+    <accept> [<limit value="rate/duration"/>] </accept> |
+    <reject [type="rejecttype"]> [<limit value="rate/duration"/>] </reject> |
+    <drop> [<limit value="rate/duration"/>] </drop>
+  ]
+  </rule>
+-->
+</zone>

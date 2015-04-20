@@ -21,7 +21,9 @@ task style: ['style:ruby', 'style:chef']
 
 desc 'Run ChefSpec examples'
 RSpec::Core::RakeTask.new(:unit) do |t|
-  t.pattern = './**/unit/**/*_spec.rb'
+  t.rspec_opts = ['--color --format progress']
+  # t.pattern = './spec/unit/filetests/*_spec.rb'
+  t.pattern = './spec/unit/recipes/*_spec.rb'
 end
 
 desc 'Run Test Kitchen'
