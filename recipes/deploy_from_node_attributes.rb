@@ -4,8 +4,6 @@
 #
 # Copyright:: 2015, The University of Illinois at Chicago
 
-include_recipe 'firewalldconfig'
-
 firewalldconfig 'firewalld.conf' do
   action :merge
   notifies :run, 'execute[firewalld-reload]'
