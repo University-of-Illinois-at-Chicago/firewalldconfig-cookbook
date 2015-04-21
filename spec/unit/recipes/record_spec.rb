@@ -28,19 +28,21 @@ describe 'firewalldconfig::record' do
     chef_run # This should not raise an error
   end
 
-  it 'should set attribute for default zone to \'public\'' do
-    expect(chef_run.node['firewalld']['default_zone']).to eq 'public'
-  end
+  it 'should set correct node attributes' do
+    # Have to force the ruby_block to run:
+    # https://coderwall.com/p/afdnyw/testing-code-inside-ruby_block-with-chefspec
+    chef_run.find_resources(:ruby_block).find do |r|
+      r.name == 'firewalldconfig-record'
+    end.old_run_action(:run)
 
-  it 'should set attribute to define \'nrpe\' firewalld service' do
+    expect(chef_run.node['firewalld']['default_zone']).to eq 'public'
+
     expect(chef_run.node['firewalld']['services']['nrpe']).to eq(
       'short' => 'NRPE',
       'description' => 'Nagios Remote Plugin Executor',
       'ports' => %w(5666/tcp)
     )
-  end
 
-  it 'should set attribute to define \'campus\' firewalld zone' do
     expect(chef_run.node['firewalld']['zones']['campus']).to eq(
       'short' => 'Campus',
       'description' => 'University campus networks.',
