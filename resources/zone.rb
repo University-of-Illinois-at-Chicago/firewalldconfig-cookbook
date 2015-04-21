@@ -131,6 +131,7 @@ attribute :target, kind_of: Symbol, callbacks: {
 }
 
 def ==(other)
+  return false unless other.is_a? self.class
   self.class.state_attrs.each do |a|
     return false unless method(a).call == other.method(a).call
   end
