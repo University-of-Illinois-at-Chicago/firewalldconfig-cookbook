@@ -24,7 +24,6 @@ attribute :ports, kind_of: Array, callbacks: {
 attribute :short, kind_of: String
 
 def ==(other)
-  return false unless name == other.name
   self.class.state_attrs.each do |a|
     return false unless method(a).call == other.method(a).call
   end
