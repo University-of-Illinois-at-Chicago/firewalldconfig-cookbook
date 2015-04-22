@@ -124,7 +124,7 @@ attribute :sources, kind_of: Array, callbacks: {
   end
 }
 
-attribute :target, kind_of: Symbol, callbacks: {
+attribute :target, kind_of: String, callbacks: {
   'must be one of "default", "accept", "drop", "reject"' => lambda do |target|
     %w(default accept drop reject).include? target
   end
