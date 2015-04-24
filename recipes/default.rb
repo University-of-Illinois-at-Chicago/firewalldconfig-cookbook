@@ -24,14 +24,18 @@ service 'iptables' do
 end
 
 # Mask iptables service so that it cannot be accidentally started.
-execute 'mask iptables.service' do
-  command 'systemctl mask iptables.service'
-  not_if do
-    iptables_service = '/etc/systemd/system/iptables.service'
-    ::File.symlink?(iptables_service) &&
-      ::File.readlink(iptables_service) == '/dev/null'
-  end
-end
+#
+# While I would like to implement this, it seems there is an SELinux bug
+# that currently prevents masking iptables. :-/
+#
+# execute 'mask iptables.service' do
+#   command 'systemctl mask iptables.service'
+#   not_if do
+#     iptables_service = '/etc/systemd/system/iptables.service'
+#     ::File.symlink?(iptables_service) &&
+#       ::File.readlink(iptables_service) == '/dev/null'
+#   end
+# end
 
 # If firewalld is masked, we need to unmask it for actions enable and start
 # to function.
