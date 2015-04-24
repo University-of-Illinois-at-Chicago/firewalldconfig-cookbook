@@ -150,6 +150,33 @@ cookbook 'firewalldconfig'
 depends 'firewalldconfig'
 ```
 
+## Recipes
+
+In your recipes using this LWRP you should should always start with by
+including the `firewalldconfig` default recipe. This ensures that firewalld
+is properly installed and enabled. The default recipe also provides an
+resource, `execute[firewalld-reload]` for reloading firewalld. Using this
+approach to reload firewalld is important because at the time of this
+writing reloading firewalld with the service target was unstable and results
+in firewalld crashing if a second reload is requested before the first
+resolves.
+
+A simple recipe to configure firewalld with the public zone as the default
+with only services `http`, `https`, and `ssh` permitted:
+
+```ruby
+include_recipe 'firewalldconfig'
+
+firewalldconfig 'firewalld.conf' do
+  default_zone 'public'
+end
+
+firewalldconfig_zone 'public' do
+  services %w(http https ssh)
+  action :create
+end
+```
+
 Contributing
 ------------
 1. Fork the project
