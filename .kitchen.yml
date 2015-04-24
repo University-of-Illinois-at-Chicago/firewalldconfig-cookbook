@@ -16,3 +16,8 @@ suites:
     run_list:
       - recipe[firewalldconfig_test::create]
     attributes:
+
+  - name: merge-prune-filter
+    run_list:
+      - recipe[firewalldconfig_test::merge-prune-filter]
+    attributes:
