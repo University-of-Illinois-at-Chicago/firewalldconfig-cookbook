@@ -131,7 +131,7 @@ supported or tested yet.
 * `:masquerade` - If set to `true`, masuerade matched traffic. Not allowed with `:action`.
 * `:forward_port` - Hash... FIXME: Not Implemented!
 * `:log` - Hash... FIXME: Not Implemented
-* `:audit` - Boolean. FIXME: Not Implemented
+* `:audit` - true or Hash. FIXME: Not Implemented
 * `:action` - String, `accept`, `reject`, `drop`.
 * `:reject_with` - Rejection type. See `iptables-extensions(8)`.
 

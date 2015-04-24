@@ -109,9 +109,11 @@ def self.doc_to_attributes(doc)
 end
 
 def self.doc_to_attributes_init(doc)
+  d_elem = doc.at_css('/zone/description')
+  s_elem = doc.at_css('/zone/short')
   {
-    description: doc.at_css('/zone/description').content,
-    short: doc.at_css('/zone/short').content,
+    description: (d_elem ? d_elem.content : ''),
+    short: (s_elem ? s_elem.content : ''),
     interfaces: [],
     ports: [],
     rules: [],
@@ -156,7 +158,12 @@ def self.doc_to_attributes_get_rule(element)
   doc_to_attributes_get_rule_destination(rule, element)
   doc_to_attributes_get_rule_service(rule, element)
   doc_to_attributes_get_rule_port(rule, element)
-  # FIXME: protocol icmp_block masquerade forward-port log audit
+  doc_to_attributes_get_rule_protocol(rule, element)
+  doc_to_attributes_get_rule_icmp_block(rule, element)
+  doc_to_attributes_get_rule_masquerade(rule, element)
+  doc_to_attributes_get_rule_forward_port(rule, element)
+  doc_to_attributes_get_rule_log(rule, element)
+  doc_to_attributes_get_rule_audit(rule, element)
   doc_to_attributes_get_rule_action(rule, element)
   rule
 end
@@ -183,6 +190,57 @@ def self.doc_to_attributes_get_rule_port(rule, element)
   port = element.at_css('/port')
   return unless port
   rule[:port] = port['port'] + '/' + port['protocol']
+end
+
+def self.doc_to_attributes_get_rule_protocol(rule, element)
+  protocol = element.at_css('/protocol')
+  return unless protocol
+  rule[:protocol] = protocol['value']
+end
+
+def self.doc_to_attributes_get_rule_icmp_block(rule, element)
+  icmp_block = element.at_css('/icmp-block')
+  return unless icmp_block
+  rule[:icmp_block] = icmp_block['name']
+end
+
+def self.doc_to_attributes_get_rule_masquerade(rule, element)
+  masquerade = element.at_css('/masquerade')
+  return unless masquerade
+  rule[:masquerade] = true
+end
+
+def self.doc_to_attributes_get_rule_forward_port(rule, element)
+  forward_port = element.at_css('/forward-port')
+  return unless forward_port
+  rule[:forward_port] = {
+    port: forward_port['port'],
+    protocol: forward_port['protocol']
+  }
+  rule[:forward_port][:to_port] =
+    forward_port['to-port'] if forward_port['to-port']
+  rule[:forward_port][:to_addr] =
+    forward_port['to-addr'] if forward_port['to-addr']
+end
+
+def self.doc_to_attributes_get_rule_log(rule, element)
+  log = element.at_css('/log')
+  return unless log
+  rule[:log] = {}
+  rule[:log][:prefix] = log['prefix'] if log['prefix']
+  rule[:log][:level] = log['level'] if log['level']
+  log_limit = log.at_css('/limit')
+  return unless log_limit
+  rule[:log][:limit] = log_limit['value']
+end
+
+def self.doc_to_attributes_get_rule_audit(rule, element)
+  audit = element.at_css('/audit')
+  return unless audit
+  rule[:audit] = {}
+  audit_limit = audit.at_css('/limit')
+  return unless audit_limit
+  rule[:audit][:limit] = audit_limit['value']
 end
 
 def self.doc_to_attributes_get_rule_action(rule, element)
@@ -367,6 +425,11 @@ def zone_doc_rule_set(rule, element)
   zone_doc_rule_set_service(rule, element)
   zone_doc_rule_set_port(rule, element)
   zone_doc_rule_set_protocol(rule, element)
+  zone_doc_rule_set_icmp_block(rule, element)
+  zone_doc_rule_set_masquerade(rule, element)
+  zone_doc_rule_set_forward_port(rule, element)
+  zone_doc_rule_set_log(rule, element)
+  zone_doc_rule_set_audit(rule, element)
   zone_doc_rule_set_action(rule, element)
 end
 
@@ -424,11 +487,73 @@ def zone_doc_rule_set_protocol(rule, element)
   element.add_child e
 end
 
+def zone_doc_rule_set_icmp_block(rule, element)
+  return unless rule.key? :icmp_block
+  e = element.document.create_element(
+    'icmp-block',
+    name: rule[:icmp_block]
+  )
+  element.add_child e
+end
+
+def zone_doc_rule_set_masquerade(rule, element)
+  return unless rule.key? :masquerade
+  return unless rule[:masquerade]
+  e = element.document.create_element 'masquerade'
+  element.add_child e
+end
+
+def zone_doc_rule_set_forward_port(rule, element)
+  return unless rule.key? :forward_port
+  e = element.document.create_element(
+    'forward-port',
+    port: rule[:forward_port][:port],
+    protocol: rule[:forward_port][:protocol]
+  )
+  e['to-port'] = rule[:forward_port][:to_port] \
+    if rule[:forward_port].key? :to_port
+  e['to-addr'] = rule[:forward_port][:to_addr] \
+    if rule[:forward_port].key? :to_addr
+  element.add_child e
+end
+
+def zone_doc_rule_set_log(rule, element)
+  return unless rule.key? :log
+  e = element.document.create_element 'log'
+  element.add_child e
+  return unless rule[:log].is_a? Hash
+  e[:prefix] = rule[:log][:prefix] if rule[:log].key? :prefix
+  e[:level] = rule[:log][:level] if rule[:log].key? :level
+  return unless rule[:log].key? :limit
+  e.add_child e.document.create_element(
+    'limit',
+    value: rule[:log][:limit]
+  )
+end
+
+def zone_doc_rule_set_audit(rule, element)
+  return unless rule.key? :audit
+  e = element.document.create_element 'audit'
+  element.add_child e
+  return unless rule[:audit].is_a? Hash
+  return unless rule[:audit].key? :limit
+  e.add_child e.document.create_element(
+    'limit',
+    value: rule[:audit][:limit]
+  )
+end
+
 def zone_doc_rule_set_action(rule, element)
   return unless rule.key? :action
-  e = element.document.create_element rule[:action].to_s
+  e = element.document.create_element rule[:action]
   if rule[:action] == 'reject' && rule.key?(:reject_with)
     e[:type] = rule[:reject_with]
+  end
+  if rule.key? :limit
+    e.add_child e.document.create_element(
+      'limit',
+      value: rule[:limit]
+    )
   end
   element.add_child e
 end

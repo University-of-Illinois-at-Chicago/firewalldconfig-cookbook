@@ -70,32 +70,36 @@ attribute :rules, kind_of: Array, callbacks: {
   'has invalid forward_port port value' =>
     ->(rules) { validate_rules_forward_has_port(rules) },
   'has invalid forward port value' =>
-    ->(rules) { validate_rules_forward_port(rules, :port) },
+    ->(rules) { validate_rules_forward_port(rules) },
+  'has invalid forward protocol value' =>
+    ->(rules) { validate_rules_forward_port_protocol(rules) },
   'has forward_port without to_addr or to_port' =>
     ->(rules) { validate_rules_forward_port_has_to_what(rules) },
   'has forward to_addr without family' =>
     ->(rules) { validate_rules_forward_to_addr_has_family(rules) },
-  'has invalid forward to_port value' =>
-    ->(rules) { validate_rules_forward_port(rules, :to_port) },
   'has invalid forward to_addr value' =>
     ->(rules) { validate_rules_forward_to_addr(rules) },
-
-  # log
-  'log must be a hash' =>
-    ->(rules) { validate_rules_is_hash(rules, :log) },
-  # FIXME: Validate more log stuff
-  #    prefix - string
-  #    level - %w(emerg alert crit error warning notice info debug)
-  #    limit - \d+/[smhd]
-
+  'has invalid forward to_port value' =>
+    ->(rules) { validate_rules_forward_port_to_port(rules) },
+  'log must be true or a hash' =>
+    ->(rules) { validate_rules_log(rules) },
+  'log prefix must be a string' =>
+    ->(rules) { validate_rules_log_prefix(rules) },
+  'log level must be one of: "emerg", "alert", "crit", "error", "warning", '\
+  '"notice", info", debug"' =>
+    ->(rules) { validate_rules_log_level(rules) },
+  'log limit must be of the form \d+/[smhd]' =>
+    ->(rules) { validate_rules_log_limit(rules) },
   'has invalid audit value' =>
-    ->(rules) { validate_rules_is_true(rules, :audit) },
+    ->(rules) { validate_rules_audit(rules) },
   'action not allowed with icmp_block, masquerade, or forward_port' =>
     ->(rules) { validate_rules_no_action_allowed(rules) },
   'has invalid action' =>
     ->(rules) { validate_rules_action(rules) },
   'has invalid reject_with type' =>
-    ->(rules) { validate_rules_reject_with(rules) }
+    ->(rules) { validate_rules_reject_with(rules) },
+  'has invalid limit' =>
+    ->(rules) { validate_rules_limit(rules) }
 }
 
 attribute :services, kind_of: Array, callbacks: {
@@ -162,12 +166,6 @@ RICHRULE_SINGLE_ELEMENTS = [
   :masquerade,
   :forward_port
 ]
-def self.firewalld_icmptypes
-  cmd = Mixlib::ShellOut.new('firewall-cmd --get-icmptypes')
-  cmd.run_command
-  cmd.stdout.split(' ')
-end
-FIREWALLD_ICMP_TYPES = firewalld_icmptypes
 IPV4_REJECT_TYPES = %w(
   icmp-net-unreachable
   icmp-host-unreachable
@@ -221,7 +219,7 @@ end
 def self.validate_rules_ip(rules, attr)
   rules.reject do |rule|
     next true unless rule.key? attr
-    Chef::Resource::FirewalldconfigZone.validate_ip_address(
+    validate_ip_address(
       rule[attr], rule[:family]
     )
   end.empty?
@@ -289,7 +287,8 @@ end
 def self.validate_rules_icmp_block(rules)
   rules.reject do |rule|
     next true unless rule.key? :icmp_block
-    FIREWALLD_ICMP_TYPES.include? name
+    ::File.file? Chef::Provider::Firewalldconfig.lib_dir +
+      "/icmptypes/#{rule[:icmp_block]}.xml"
   end.empty?
 end
 
@@ -314,11 +313,20 @@ def self.validate_rules_forward_has_port(rules)
   end.empty?
 end
 
-def self.validate_rules_forward_port(rules, which)
+def self.validate_rules_forward_port(rules)
   rules.reject do |rule|
     next true unless rule.key? :forward_port
-    next true unless rule[:forward_port].key? which
-    rule[:forward_port][which].match(/^\d+(-\d+)?\/(tcp|udp)$/)
+    next false unless rule[:forward_port].key? :port
+    next true if rule[:forward_port][:port].is_a? Integer
+    rule[:forward_port][:to_port].match(/^\d+(-\d+)?/)
+  end.empty?
+end
+
+def self.validate_rules_forward_port_protocol(rules)
+  rules.reject do |rule|
+    next true unless rule.key? :forward_port
+    next false unless rule[:forward_port].key? :protocol
+    %w(tcp udp).include? rule[:forward_port]
   end.empty?
 end
 
@@ -343,9 +351,67 @@ def self.validate_rules_forward_to_addr(rules)
   rules.reject do |rule|
     next true unless rule.key? :forward_port
     next true unless rule[:forward_port].key? :to_addr
-    Chef::Resource::FirewalldconfigZone.validate_ip_address(
+    next false if rule[:forward_port][:to_addr].index('/')
+    validate_ip_address(
       rule[:forward_port][:to_addr], rule[:family]
     )
+  end.empty?
+end
+
+def self.validate_rules_forward_port_to_port(rules)
+  rules.reject do |rule|
+    next true unless rule.key? :forward_port
+    next true unless rule[:forward_port].key? :to_port
+    next true if rule[:forward_port][:to_port].is_a? Integer
+    rule[:forward_port][:to_port].match(/^\d+(-\d+)?/)
+  end.empty?
+end
+
+def self.validate_rules_log(rules)
+  rules.reject do |rule|
+    next true unless rule.key? :log
+    next true if rule[:log] == true
+    rule[:log].is_a? Hash
+  end.empty?
+end
+
+def self.validate_rules_log_prefix(rules)
+  rules.reject do |rule|
+    next true unless rule.key? :log
+    next true unless rule[:log].key? :prefix
+    rule[:log][:prefix].is_a? String
+  end.empty?
+end
+
+def self.validate_rules_log_level(rules)
+  rules.reject do |rule|
+    next true unless rule.key? :log
+    next true unless rule[:log].key? :level
+    %w(
+      emerg alert crit error warning notice info debug
+    ).include? rule[:log][:level]
+  end.empty?
+end
+
+def self.validate_rules_log_limit(rules)
+  rules.reject do |rule|
+    next true unless rule.key? :log
+    next true unless rule[:log].key? :limit
+    next false unless rule[:log][:limit].is_a? String
+    rule[:log][:limit] =~ /^\d+\/[smhd]$/
+  end.empty?
+end
+
+# The rich-rule audit setting can either be true, or a hash wich may specify
+# a rate limit.
+def self.validate_rules_audit(rules)
+  rules.reject do |rule|
+    next true unless rule.key? :audit
+    next true if rule[:audit] == true
+    next false unless rule[:audit].is_a? Hash
+    next true unless rule[:audit].key? :limit
+    next false unless rule[:log][:limit].is_a? String
+    rule[:audit][:limit] =~ /^\d+\/[smhd]$/
   end.empty?
 end
 
@@ -381,4 +447,12 @@ def self.validate_reject_type(reject_type, family)
   else
     false
   end
+end
+
+def self.validate_rules_limit(rules)
+  rules.reject do |rule|
+    next true unless rule.key? :limit
+    next false unless rule[:limit].is_a? String
+    rule[:limit] =~ /^\d+\/[smhd]$/
+  end.empty?
 end
