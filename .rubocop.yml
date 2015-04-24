@@ -1,12 +1,18 @@
+Metrics/AbcSize:
+  Max: 30
+Metrics/CyclomaticComplexity:
+  Max: 10
+Metrics/MethodLength:
+  Max: 25
+Metrics/PerceivedComplexity:
+  Max: 10
 #
 # we like our neatly-aligned code too much
 #
 SingleSpaceBeforeFirstArg:
   Enabled: false
-Metrics/AbcSize:
-  Max: 30
-Metrics/MethodLength:
-  Max: 25
+#
 # Rubocop was throwing suprious "snake_case" errors. This fixes that.
+#
 Style/FileName:
   Enabled: false
