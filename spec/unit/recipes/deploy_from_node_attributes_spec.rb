@@ -29,11 +29,14 @@ describe 'firewalldconfig::deploy_from_node_attributes' do
       .with('firewalldconfig').and_call_original
   end
 
-  context 'When record attributes are set, on an unspecified platform' do
+  context 'With firewall attributes set.' do
     let(:chef_run) do
-      ChefSpec::SoloRunner.new(step_into: %w(
-        firewalldconfig firewalldconfig_service firewalldconfig_zone
-      )) do |node|
+      ChefSpec::SoloRunner.new(
+        platform: 'centos', version: '7.0',
+        step_into: %w(
+          firewalldconfig firewalldconfig_service firewalldconfig_zone
+        )
+      ) do |node|
         node.set['firewalld'] = {
           'cleanup_on_exit' => true,
           'default_zone'    => 'public',

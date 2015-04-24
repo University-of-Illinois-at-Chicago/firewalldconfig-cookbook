@@ -4,7 +4,17 @@
 #
 # Copyright:: 2015, The University of Illinois at Chicago
 
-include_recipe 'xml::ruby'
+# recipe xml::ruby fails if patch is not immediately available
+package 'patch' do
+  action :nothing
+end.run_action(:install)
+
+if node['platform_family'] == 'debian'
+  package 'ufw' do
+    action :remove
+  end
+  package 'firewall-applet'
+end
 
 package 'firewalld'
 
