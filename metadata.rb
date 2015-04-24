@@ -8,7 +8,7 @@ version          '0.1.9'
 
 depends          'xml'
 
-supports         'fedora', '>= 21'
+supports         'fedora', '>= 21.0'
 supports         'centos', '>= 7.0'
 supports         'rhel', '>= 7.0'
 supports         'ubuntu', '>= 14.10'
