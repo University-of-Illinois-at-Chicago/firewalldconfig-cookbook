@@ -378,6 +378,7 @@ end
 def self.validate_rules_log_prefix(rules)
   rules.reject do |rule|
     next true unless rule.key? :log
+    next true if rule[:log] == true
     next true unless rule[:log].key? :prefix
     rule[:log][:prefix].is_a? String
   end.empty?
@@ -386,6 +387,7 @@ end
 def self.validate_rules_log_level(rules)
   rules.reject do |rule|
     next true unless rule.key? :log
+    next true if rule[:log] == true
     next true unless rule[:log].key? :level
     %w(
       emerg alert crit error warning notice info debug
@@ -396,6 +398,7 @@ end
 def self.validate_rules_log_limit(rules)
   rules.reject do |rule|
     next true unless rule.key? :log
+    next true if rule[:log] == true
     next true unless rule[:log].key? :limit
     next false unless rule[:log][:limit].is_a? String
     rule[:log][:limit] =~ /^\d+\/[smhd]$/
@@ -410,7 +413,7 @@ def self.validate_rules_audit(rules)
     next true if rule[:audit] == true
     next false unless rule[:audit].is_a? Hash
     next true unless rule[:audit].key? :limit
-    next false unless rule[:log][:limit].is_a? String
+    next false unless rule[:audit][:limit].is_a? String
     rule[:audit][:limit] =~ /^\d+\/[smhd]$/
   end.empty?
 end

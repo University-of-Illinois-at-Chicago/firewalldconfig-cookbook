@@ -60,23 +60,41 @@ describe 'firewalldconfig::deploy_from_node_attributes' do
               'rules' => [
                 {
                   'family' => 'ipv4',
+                  'source' => '10.0.0.0/24',
+                  'port' => '999/udp',
+                  'action' => 'drop',
+                  'audit' => {
+                    'limit' => '10/s'
+                  },
+                  'reject_with' => 'icmp-port-unreachable'
+                },
+                {
+                  'family' => 'ipv4',
                   'source' => '128.248.0.0/16',
                   'source_invert' => true,
                   'service' => 'mysql',
                   'action' => 'reject',
+                  'audit' => true,
                   'reject_with' => 'icmp-port-unreachable'
                 },
                 {
                   'family' => 'ipv4',
                   'source' => '128.248.155.93',
                   'service' => 'mysql',
+                  'log' => {
+                    'prefix' => 'test',
+                    'level' => 'notice',
+                    'limit' => '10/m'
+                  },
                   'action' => 'accept'
                 },
                 {
                   'family' => 'ipv4',
                   'source' => '131.193.99.88',
                   'port' => '8443/tcp',
-                  'action' => 'accept'
+                  'log' => true,
+                  'action' => 'accept',
+                  'limit' => '10/s'
                 }
               ]
             }
@@ -186,32 +204,46 @@ describe 'firewalldconfig::deploy_from_node_attributes' do
       expect(doc.at_css('/zone/service[name="http"]')).to be
       expect(doc.at_css('/zone/service[name="https"]')).to be
 
-      expect(doc.css('/zone/rule').length).to eq 3
+      expect(doc.css('/zone/rule').length).to eq 4
 
       rule_element = doc.css('/zone/rule')[0]
+      expect(rule_element['family']).to eq 'ipv4'
+      expect(rule_element.at_css('/source[address="10.0.0.0/24"]')).to be
+      expect(rule_element.at_css('/port[port="999"][protocol="udp"]')).to be
+      expect(rule_element.at_css('/audit')).to be
+      expect(rule_element.at_css('/audit/limit[value="10/s"]')).to be
+      expect(rule_element.at_css('/drop')).to be
+      expect(rule_element.children.length).to eq 4
+
+      rule_element = doc.css('/zone/rule')[1]
       expect(rule_element['family']).to eq 'ipv4'
       expect(rule_element.at_css(
         '/source[address="128.248.0.0/16"][invert="True"]'
       )).to be
       expect(rule_element.at_css('/service[name="mysql"]')).to be
       expect(rule_element.at_css('/reject[type="icmp-port-unreachable"]')).to be
-      expect(rule_element.children.length).to eq 3
+      expect(rule_element.at_css('/audit')).to be
+      expect(rule_element.children.length).to eq 4
 
-      rule_element = doc.css('/zone/rule')[1]
+      rule_element = doc.css('/zone/rule')[2]
       expect(rule_element['family']).to eq 'ipv4'
       expect(rule_element.at_css('/source[address="128.248.155.93"]'))
         .to be
       expect(rule_element.at_css('/service[name="mysql"]')).to be
       expect(rule_element.at_css('/accept')).to be
-      expect(rule_element.children.length).to eq 3
+      expect(rule_element.at_css('/log[prefix="test"][level="notice"]')).to be
+      expect(rule_element.at_css('/log/limit[value="10/m"]')).to be
+      expect(rule_element.children.length).to eq 4
 
-      rule_element = doc.css('/zone/rule')[2]
+      rule_element = doc.css('/zone/rule')[3]
       expect(rule_element['family']).to eq 'ipv4'
       expect(rule_element.at_css('/source[address="131.193.99.88"]'))
         .to be
       expect(rule_element.at_css('/port[port="8443"][protocol="tcp"]')).to be
+      expect(rule_element.at_css('/log')).to be
       expect(rule_element.at_css('/accept')).to be
-      expect(rule_element.children.length).to eq 3
+      expect(rule_element.at_css('/accept/limit[value="10/s"]')).to be
+      expect(rule_element.children.length).to eq 4
     end
 
     it 'does not write zones/home.xml' do

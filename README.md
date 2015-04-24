@@ -114,11 +114,6 @@ remove customizations if the service is also defined by a default.
 
 #### Rich-rule specification
 
-_ATTENTION_ The rich-rule support for this LWRP is still evolving. While the
-Hash syntax given below will be supported, it may also be desirable to support
-the firewalld richlanguage directly. Also not all rich-rule functionality is
-supported or tested yet.
-
 * `:family` - String, `ipv4` or `ipv6`
 * `:source` - String, IP address specification, requires family.
 * `:source_invert` - If set to `true`, invert source matching.
@@ -130,10 +125,11 @@ supported or tested yet.
 * `:icmp_block` - String, icmp-block value. Not allowed with `:action`.
 * `:masquerade` - If set to `true`, masuerade matched traffic. Not allowed with `:action`.
 * `:forward_port` - Hash... FIXME: Not Implemented!
-* `:log` - Hash... FIXME: Not Implemented
-* `:audit` - true or Hash. FIXME: Not Implemented
+* `:log` - true or Hash. If Hash, it may include `:prefix`, `:level`, `:limit`.
+* `:audit` - true or Hash. If Hash, it may include `:limit`.
 * `:action` - String, `accept`, `reject`, `drop`.
 * `:reject_with` - Rejection type. See `iptables-extensions(8)`.
+* `:limit` - String, "rate/duration". Modifies :action.
 
 # Recipes
 

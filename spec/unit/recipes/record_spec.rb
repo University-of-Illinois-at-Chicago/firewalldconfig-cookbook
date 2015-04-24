@@ -63,13 +63,16 @@ describe 'firewalldconfig::record' do
           'family' => 'ipv4',
           'source' => '128.248.155.0/24',
           'service' => 'mysql',
+          'log' => { 'prefix' => 'mysql', 'level' => 'info', 'limit' => '1/s' },
           'action' => 'accept'
         },
         {
           'family' => 'ipv4',
           'source' => '131.193.99.88',
           'port' => '8443/tcp',
-          'action' => 'accept'
+          'action' => 'accept',
+          'audit' => { 'limit' => '10/m' },
+          'limit' => '10/s'
         }
       ]
     )

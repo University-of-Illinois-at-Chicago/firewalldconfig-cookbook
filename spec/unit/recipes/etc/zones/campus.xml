@@ -16,12 +16,14 @@
   <rule family="ipv4">
     <source address="128.248.155.0/24"/>
     <service name="mysql"/>
+    <log prefix="mysql" level="info"><limit value="1/s"/></log>
     <accept/>
   </rule>
   <rule family="ipv4">
     <source address="131.193.99.88"/>
     <port protocol="tcp" port="8443"/>
-    <accept/>
+    <audit><limit value="10/m"/></audit>
+    <accept><limit value="10/s"/></accept>
   </rule>
 <!--
   <rule [family="ipv4|ipv6"]>

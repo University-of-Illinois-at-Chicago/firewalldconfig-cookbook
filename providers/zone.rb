@@ -254,6 +254,9 @@ def self.doc_to_attributes_get_rule_action(rule, element)
       rule[:reject_with] = element.at_css('/reject')['type']
     end
   end
+  return unless rule[:action]
+  limit = element.at_css("/#{rule[:action]}/limit")
+  rule[:limit] = limit[:value] if limit
 end
 
 def self.doc_to_attributes_get_rule_destination(rule, element)
