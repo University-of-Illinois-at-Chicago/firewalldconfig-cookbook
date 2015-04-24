@@ -7,3 +7,6 @@ Metrics/AbcSize:
   Max: 30
 Metrics/MethodLength:
   Max: 25
+# Rubocop was throwing suprious "snake_case" errors. This fixes that.
+Style/FileName:
+  Enabled: false
