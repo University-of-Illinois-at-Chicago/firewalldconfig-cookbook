@@ -6,7 +6,8 @@
 }
 
 @test "firewalld is active" {
-        run systemctl is-active firewalld.service
+        run service firewalld status
+        #run systemctl is-active firewalld.service
         [ "$status" -eq 0 ]
 }
 
