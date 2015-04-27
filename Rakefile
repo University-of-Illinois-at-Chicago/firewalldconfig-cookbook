@@ -34,6 +34,9 @@ task :integration do
   end
 end
 
+require 'stove/rake_task'
+Stove::RakeTask.new
+
 # Default
 task default: %w(style unit)
 
