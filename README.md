@@ -106,6 +106,7 @@ remove customizations if the service is also defined by a default.
 * `:description` - Zone description. String.
 * `:short` - Zone short description. String.
 * `:interfaces` - Interfaces for matching incoming traffic to zone. Array of interfaces names.
+* `:forward_ports` - FIXME - NOT IMPLEMENTED YET (target 0.8.0 release)
 * `:sources` - Sources for matching incoming traffic to zone. Array of IP address specifications.
 * `:ports` - Ports allowed to zone. Array of Strings of the form `portid[-portid]/protocol`.
 * `:rules` - Rich-rule specifications. Array of Hashes as described below.
@@ -124,12 +125,19 @@ remove customizations if the service is also defined by a default.
 * `:protocol` - String, protocol to match (see `/etc/protocols`).
 * `:icmp_block` - String, icmp-block value. Not allowed with `:action`.
 * `:masquerade` - If set to `true`, masuerade matched traffic. Not allowed with `:action`.
-* `:forward_port` - Hash... FIXME: Not Implemented!
+* `:forward_port` - Hash. See specification below.
 * `:log` - true or Hash. If Hash, it may include `:prefix`, `:level`, `:limit`.
 * `:audit` - true or Hash. If Hash, it may include `:limit`.
 * `:action` - String, `accept`, `reject`, `drop`.
 * `:reject_with` - Rejection type. See `iptables-extensions(8)`.
 * `:limit` - String, "rate/duration". Modifies :action.
+
+#### Forward ports specification
+
+* `:port` - String, port specification, `portid[-portid]/protocol`.
+* `:protocol` - String, "tcp" or "udp".
+* `:to_port` - String, forward target port.
+* `:to_addr` - String, forward target address.
 
 # Recipes
 
