@@ -9,6 +9,7 @@ default_action :merge
 
 state_attrs :name,
             :description,
+            # FIXME: Add :forward_ports,
             :interfaces,
             :ports,
             :rules,
