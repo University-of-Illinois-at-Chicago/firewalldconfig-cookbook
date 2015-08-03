@@ -327,7 +327,7 @@ def self.validate_rules_forward_port_protocol(rules)
   rules.reject do |rule|
     next true unless rule.key? :forward_port
     next false unless rule[:forward_port].key? :protocol
-    %w(tcp udp).include? rule[:forward_port]
+    %w(tcp udp).include? rule[:forward_port][:protocol]
   end.empty?
 end
 
