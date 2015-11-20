@@ -311,7 +311,7 @@ def merge_current_into_new(array_merge)
   [:description, :short, :target].each do |attr|
     new_val = @new_resource.method(attr).call
     current_val = @current_resource.method(attr).call
-    @new_resource.method(attr).call(current_val) if new_val.nil?
+    @new_resource.method(attr).call(current_val) if new_val.nil? and !current_val.nil?
   end
 
   # Array attribute values.
