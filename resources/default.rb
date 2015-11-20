@@ -34,7 +34,7 @@ end
 
 def file_path
   return file if file[0] == '/'
-  "#{Chef::Provider::Firewalldconfig.etc_dir}/#{file}"
+  "#{::Firewalldconfig.etc_dir}/#{file}"
 end
 
 def exists

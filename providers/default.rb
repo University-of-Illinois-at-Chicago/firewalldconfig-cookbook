@@ -27,13 +27,6 @@ action :merge do
   new_resource.updated_by_last_action(merge_and_converge)
 end
 
-@lib_dir = '/usr/lib/firewalld'
-@etc_dir = '/etc/firewalld'
-class << self
-  attr_accessor :lib_dir
-  attr_accessor :etc_dir
-end
-
 CONFIG_OPT = {
   'CleanupOnExit' => {
     default: true,
@@ -63,7 +56,7 @@ CONFIG_OPT = {
 }
 
 def self.read_conf(path = nil)
-  path = "#{etc_dir}/firewalld.conf" if path.nil?
+  path = "#{::Firewalldconfig.etc_dir}/firewalld.conf" if path.nil?
   return {} unless ::File.file? path
   settings = {}
   ::File.open(path).each do |line|

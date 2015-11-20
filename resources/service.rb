@@ -32,7 +32,7 @@ def ==(other)
 end
 
 def file_path
-  "#{Chef::Provider::Firewalldconfig.etc_dir}/services/#{name}.xml"
+  "#{::Firewalldconfig.etc_dir}/services/#{name}.xml"
 end
 
 def configured
@@ -41,7 +41,7 @@ end
 
 def exists
   return true if configured
-  ::File.file? "#{Chef::Provider::Firewalldconfig.lib_dir}/services/#{name}.xml"
+  ::File.file? "#{::Firewalldconfig.lib_dir}/services/#{name}.xml"
 end
 
 private
