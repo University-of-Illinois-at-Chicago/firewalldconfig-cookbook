@@ -14,12 +14,12 @@ describe 'firewalldconfig::deploy_from_node_attributes' do
     etc_dir = Dir.mktmpdir
     Dir.mkdir "#{etc_dir}/zones"
     Dir.mkdir "#{etc_dir}/services"
-    ::Firewalldconfig.etc_dir = "#{etc_dir}"
-    ::Firewalldconfig.lib_dir = "#{File.dirname(__FILE__)}/lib"
+    FirewalldconfigUtil.etc_dir = "#{etc_dir}"
+    FirewalldconfigUtil.lib_dir = "#{File.dirname(__FILE__)}/lib"
   end
 
   after(:all) do
-    # FileUtils.rm_r ::Firewalldconfig.etc_dir
+    # FileUtils.rm_r FirewalldconfigUtil.etc_dir
   end
 
   before(:each) do
@@ -133,13 +133,13 @@ describe 'firewalldconfig::deploy_from_node_attributes' do
 
     it 'writes firewalld.conf' do
       expect(File).to exist(
-        "#{::Firewalldconfig.etc_dir}/firewalld.conf"
+        "#{FirewalldconfigUtil.etc_dir}/firewalld.conf"
       )
     end
 
     it 'has correct content in firewalld.conf' do
       lines = ::File.open(
-        "#{::Firewalldconfig.etc_dir}/firewalld.conf"
+        "#{FirewalldconfigUtil.etc_dir}/firewalld.conf"
       ).readlines
       expect(lines).to include("CleanupOnExit=true\n")
       expect(lines).to include("DefaultZone=public\n")
@@ -158,13 +158,13 @@ describe 'firewalldconfig::deploy_from_node_attributes' do
 
     it 'writes services/nrpe.xml' do
       expect(File).to exist(
-        "#{::Firewalldconfig.etc_dir}/services/nrpe.xml"
+        "#{FirewalldconfigUtil.etc_dir}/services/nrpe.xml"
       )
     end
 
     it 'has correct content for services/nrpe.xml' do
       doc = Nokogiri::XML(::File.open(
-        "#{::Firewalldconfig.etc_dir}/services/nrpe.xml"
+        "#{FirewalldconfigUtil.etc_dir}/services/nrpe.xml"
       )) { |x| x.noblanks }
       expect(doc.at_css('/service/short').content).to eq('NRPE')
       expect(doc.at_css('/service/description').content).to eq(
@@ -182,13 +182,13 @@ describe 'firewalldconfig::deploy_from_node_attributes' do
 
     it 'writes zones/public.xml' do
       expect(File).to exist(
-        "#{::Firewalldconfig.etc_dir}/zones/public.xml"
+        "#{FirewalldconfigUtil.etc_dir}/zones/public.xml"
       )
     end
 
     it 'has correct content for zones/public.xml' do
       doc = Nokogiri::XML(::File.open(
-        "#{::Firewalldconfig.etc_dir}/zones/public.xml"
+        "#{FirewalldconfigUtil.etc_dir}/zones/public.xml"
       )) { |x| x.noblanks }
       expect(doc.at_css('/zone/short').content).to eq('Public')
       expect(doc.at_css('/zone/description').content).to eq(
@@ -248,7 +248,7 @@ describe 'firewalldconfig::deploy_from_node_attributes' do
 
     it 'does not write zones/home.xml' do
       expect(File).to_not exist(
-        "#{::Firewalldconfig.etc_dir}/zones/home.xml"
+        "#{FirewalldconfigUtil.etc_dir}/zones/home.xml"
       )
     end
   end

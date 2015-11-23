@@ -15,8 +15,8 @@ describe 'firewalldconfig::record' do
     allow_any_instance_of(Chef::Node)
       .to receive(:save)
       .and_return(true)
-    ::Firewalldconfig.etc_dir = "#{File.dirname(__FILE__)}/etc"
-    ::Firewalldconfig.lib_dir = "#{File.dirname(__FILE__)}/lib"
+    FirewalldconfigUtil.etc_dir = "#{File.dirname(__FILE__)}/etc"
+    FirewalldconfigUtil.lib_dir = "#{File.dirname(__FILE__)}/lib"
   end
 
   let(:chef_run) do

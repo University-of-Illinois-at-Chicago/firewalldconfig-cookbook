@@ -56,7 +56,7 @@ CONFIG_OPT = {
 }
 
 def self.read_conf(path = nil)
-  path = "#{::Firewalldconfig.etc_dir}/firewalld.conf" if path.nil?
+  path = "#{FirewalldconfigUtil.etc_dir}/firewalld.conf" if path.nil?
   return {} unless ::File.file? path
   settings = {}
   ::File.open(path).each do |line|

@@ -68,13 +68,13 @@ end
 
 def self.builtin
   ::Dir.entries(
-    "#{::Firewalldconfig.lib_dir}/zones"
+    "#{FirewalldconfigUtil.lib_dir}/zones"
   ).grep(/^[a-zA-Z].*\.xml$/).collect { |s| s[0..-5] }
 end
 
 def self.configured
   ::Dir.entries(
-    "#{::Firewalldconfig.etc_dir}/zones"
+    "#{FirewalldconfigUtil.etc_dir}/zones"
   ).grep(/^[a-zA-Z].*\.xml$/).collect { |s| s[0..-5] }
 end
 
@@ -87,8 +87,8 @@ end
 def self.parse_configuration_xml(name)
   require 'nokogiri'
   [
-    ::Firewalldconfig.etc_dir,
-    ::Firewalldconfig.lib_dir
+    FirewalldconfigUtil.etc_dir,
+    FirewalldconfigUtil.lib_dir
   ].each do |dir|
     xml_path = "#{dir}/zones/#{name}.xml"
     next unless ::File.file? xml_path

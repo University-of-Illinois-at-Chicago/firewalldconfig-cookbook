@@ -144,7 +144,7 @@ def ==(other)
 end
 
 def file_path
-  "#{::Firewalldconfig.etc_dir}/zones/#{name}.xml"
+  "#{FirewalldconfigUtil.etc_dir}/zones/#{name}.xml"
 end
 
 def configured
@@ -153,7 +153,7 @@ end
 
 def exists
   return true if configured
-  ::File.file? "#{::Firewalldconfig.lib_dir}/zones/#{name}.xml"
+  ::File.file? "#{FirewalldconfigUtil.lib_dir}/zones/#{name}.xml"
 end
 
 private
@@ -288,7 +288,7 @@ end
 def self.validate_rules_icmp_block(rules)
   rules.reject do |rule|
     next true unless rule.key? :icmp_block
-    ::File.file? ::Firewalldconfig.lib_dir +
+    ::File.file? FirewalldconfigUtil.lib_dir +
       "/icmptypes/#{rule[:icmp_block]}.xml"
   end.empty?
 end

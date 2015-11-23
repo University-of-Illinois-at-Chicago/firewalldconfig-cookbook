@@ -1,4 +1,4 @@
-class Firewalldconfig
+class FirewalldconfigUtil
   @etc_dir = '/etc/firewalld'
   @lib_dir = '/usr/lib/firewalld'
   class << self
