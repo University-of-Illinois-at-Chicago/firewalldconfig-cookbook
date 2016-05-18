@@ -5,7 +5,7 @@
 # Copyright:: 2015, The University of Illinois at Chicago
 
 ruby_block 'firewalldconfig-record' do
-  action :run
+  action :nothing
   block do
     FirewalldconfigUtil.read_conf.each do |k, v|
       node.set['firewalld'][k] = v
@@ -25,4 +25,5 @@ ruby_block 'firewalldconfig-record' do
 
     node.save
   end
+  subscribes :run, 'execute[firewalld-reload]'
 end
