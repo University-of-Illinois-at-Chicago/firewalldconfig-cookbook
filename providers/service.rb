@@ -52,52 +52,12 @@ def self.configured
   ).grep(/^[a-zA-Z].*\.xml$/).collect { |s| s[0..-5] }
 end
 
-def self.read_configuration(name)
-  doc = parse_configuration_xml name
-  return nil if doc.nil?
-  doc_to_attributes(doc)
-end
-
-def self.parse_configuration_xml(name)
-  require 'nokogiri'
-  [
-    FirewalldconfigUtil.etc_dir,
-    FirewalldconfigUtil.lib_dir
-  ].each do |dir|
-    xml_path = "#{dir}/services/#{name}.xml"
-    next unless ::File.file? xml_path
-    return Nokogiri::XML(::File.open(xml_path))
-  end
-  nil
-end
-
-def self.doc_to_attributes(doc)
-  attributes = doc_to_attributes_init(doc)
-  doc_to_attributes_get_ports(doc, attributes)
-  attributes
-end
-
-def self.doc_to_attributes_init(doc)
-  {
-    description: doc.at_xpath('/service/description').content,
-    short: doc.at_xpath('/service/short').content,
-    ports: []
-  }
-end
-
-def self.doc_to_attributes_get_ports(doc, attributes)
-  doc.xpath('/service/port').each do |port|
-    attributes[:ports].push(port['port'] + '/' + port['protocol'])
-  end
-  attributes[:ports].sort!.uniq!
-end
-
 def load_current_resource
   @current_resource = Chef::Resource::FirewalldconfigService.new(
     @new_resource.name
   )
   @current_resource.name(@new_resource.name)
-  conf = self.class.read_configuration(@current_resource.name)
+  conf = FirewalldconfigUtil.read_service_configuration(@current_resource.name)
   if conf
     conf.each do |a, v|
       @current_resource.method(a).call(v)

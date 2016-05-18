@@ -27,41 +27,13 @@ action :merge do
   new_resource.updated_by_last_action(merge_and_converge)
 end
 
-CONFIG_OPT = {
-  'CleanupOnExit' => {
-    default: true,
-    sym: :cleanup_on_exit,
-    val: ->(s) { /^(yes|true)/i.match(s) ? true : false }
-  },
-  'DefaultZone'   => {
-    default: 'public',
-    sym: :default_zone,
-    val: ->(s) { s }
-  },
-  'IPv6_rpfilter' => {
-    default:   true,
-    sym: :ipv6_rpfilter,
-    val: ->(s) { /^(yes|true)/i.match(s) ? true : false }
-  },
-  'Lockdown'      => {
-    default: false,
-    sym: :lockdown,
-    val: ->(s) { /^(yes|true)/i.match(s) ? true : false }
-  },
-  'MinimalMark'   => {
-    default:    100,
-    sym: :minimal_mark,
-    val: ->(s) { s.to_i }
-  }
-}
-
 def self.read_conf(path = nil)
   path = "#{FirewalldconfigUtil.etc_dir}/firewalld.conf" if path.nil?
   return {} unless ::File.file? path
   settings = {}
   ::File.open(path).each do |line|
     next unless /^(?<key>\w+)=(?<value>.*)/ =~ line
-    opt = CONFIG_OPT[key]
+    opt = FirewalldconfigUtil.CONFIG_OPT[key]
     next if opt.nil?
     settings[opt[:sym]] = opt[:val].call(value)
   end
@@ -71,7 +43,7 @@ end
 def load_current_resource
   @current_resource = Chef::Resource::Firewalldconfig.new(@new_resource.name)
   @current_resource.file(@new_resource.file)
-  conf = self.class.read_conf(@new_resource.file_path)
+  conf = FirewalldconfigUtil.read_conf(@new_resource.file_path)
   conf.each do |a, v|
     @current_resource.method(a).call(v)
   end
@@ -80,7 +52,7 @@ end
 def write_conf
   lines = read_conf_lines
   set_options = substitute_conf_lines(lines)
-  add_conf_lines(lines, CONFIG_OPT.keys - set_options)
+  add_conf_lines(lines, FirewalldconfigUtil.CONFIG_OPT.keys - set_options)
   fh = ::File.open(new_resource.file_path, 'w')
   lines.each do |line|
     fh.puts line
@@ -98,7 +70,7 @@ end
 def substitute_conf_lines(lines)
   set_opts = []
   lines.each do |line|
-    CONFIG_OPT.each do |opt, info|
+    FirewalldconfigUtil.CONFIG_OPT.each do |opt, info|
       set_opts << opt if line.gsub!(
         /^#{opt}=.*/,
         "#{opt}=#{new_resource.method(info[:sym]).call}"
@@ -110,12 +82,12 @@ end
 
 def add_conf_lines(lines, opts)
   opts.each do |opt|
-    lines << "#{opt}=#{new_resource.method(CONFIG_OPT[opt][:sym]).call}"
+    lines << "#{opt}=#{new_resource.method(FirewalldconfigUtil.CONFIG_OPT[opt][:sym]).call}"
   end
 end
 
 def merge_current_into_new
-  CONFIG_OPT.each_value do |opt|
+  FirewalldconfigUtil.CONFIG_OPT.each_value do |opt|
     attr = opt[:sym]
     new_val = @new_resource.method(attr).call
     current_val = @current_resource.method(attr).call
@@ -124,7 +96,7 @@ def merge_current_into_new
 end
 
 def merge_defaults_into_new
-  CONFIG_OPT.each_value do |opt|
+  FirewalldconfigUtil.CONFIG_OPT.each_value do |opt|
     @new_resource.method(opt[:sym]).call(
       opt[:default]
     ) if @new_resource.method(opt[:sym]).call.nil?

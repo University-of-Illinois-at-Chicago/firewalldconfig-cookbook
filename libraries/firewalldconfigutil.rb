@@ -41,7 +41,7 @@ class FirewalldconfigUtil
     settings = {}
     ::File.open(path).each do |line|
       next unless /^(?<key>\w+)=(?<value>.*)/ =~ line
-      opt = CONFIG_OPT[key]
+      opt = @CONFIG_OPT[key]
       next if opt.nil?
       settings[opt[:sym]] = opt[:val].call(value)
     end
