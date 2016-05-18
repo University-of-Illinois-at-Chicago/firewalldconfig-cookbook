@@ -35,6 +35,24 @@ class FirewalldconfigUtil
     attr_accessor :CONFIG_OPT
   end 
 
+  def self.read_all_config
+    conf = FirewalldconfigUtil.read_conf
+
+    conf['services'] = {}
+    FirewalldconfigUtil.configured_service_names.each do |name|
+      conf['services'][name] =
+        FirewalldconfigUtil.read_service_configuration(name)
+    end
+
+    conf['zones'] = {}
+    FirewalldconfigUtil.configured_zone_names.each do |name|
+      conf['zones'][name] =
+        FirewalldconfigUtil.read_zone_configuration(name)
+    end
+
+    return conf
+  end
+
   def self.read_conf(path = nil)
     path = "#{FirewalldconfigUtil.etc_dir}/firewalld.conf" if path.nil?
     return {} unless ::File.file? path
