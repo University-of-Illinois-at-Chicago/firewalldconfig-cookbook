@@ -48,9 +48,9 @@ attribute :rules, kind_of: Array, callbacks: {
   'has invalid destination address' =>
     ->(rules) { validate_rules_ip(rules, :destination) },
   'has invalid destination_invert' =>
-    lambda do |rules|
+    ->(rules) {
       validate_rules_invert(rules, :destination, :destination_invert)
-    end,
+    },
   'cannot have more than one of service, port, protocol, icmp_block, '\
   'masquerade, or forward_port' =>
     ->(rules) { validate_rules_single_element(rules) },
