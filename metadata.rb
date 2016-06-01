@@ -1,5 +1,5 @@
 name             'firewalldconfig'
-maintainer       'Johnathan Kuprerer'
+maintainer       'Johnathan Kupferer'
 maintainer_email 'jtk@uic.edu'
 license          'Apache v2.0'
 description      'Installs/Configures firewalld using configuration files'
